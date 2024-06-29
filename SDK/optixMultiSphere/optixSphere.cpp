@@ -94,6 +94,7 @@ int main( int argc, char* argv[] )
     std::string outfile;
     int         width  = 1024;
     int         height =  768;
+    const int   nbSpheres = 10;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -154,25 +155,33 @@ int main( int argc, char* argv[] )
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
             // sphere build input
-
-            float3 sphereVertex = make_float3( 0.f, 0.f, 0.f );
-            float  sphereRadius = 1.5f;
+            std::vector<float3> sphereVertices;
+            std::vector<float> sphereRadii;
+            for(int idxSphere = 0; idxSphere < nbSpheres; idxSphere++)
+            {
+                const float3 sphereVertex = make_float3( 2.0f * (drand48() - 0.5f), 
+                                                   2.0f * (drand48() - 0.5f), 
+                                                   2.0f * (drand48() - 0.5f) );
+                const float  sphereRadius = 0.2;
+                sphereVertices.push_back( sphereVertex );
+                sphereRadii.push_back( sphereRadius );
+            }
 
             CUdeviceptr d_vertex_buffer;
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sizeof( float3 ) ) );
-            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_vertex_buffer ), &sphereVertex,
-                                    sizeof( float3 ), cudaMemcpyHostToDevice ) );
+            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sphereVertices.size() * sizeof( float3 ) ) );
+            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_vertex_buffer ), sphereVertices.data(),
+                                    sphereVertices.size() * sizeof( float3 ), cudaMemcpyHostToDevice ) );
 
             CUdeviceptr d_radius_buffer;
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_radius_buffer ), sizeof( float ) ) );
-            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_radius_buffer ), &sphereRadius, sizeof( float ),
+            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_radius_buffer ), sphereRadii.size() * sizeof( float ) ) );
+            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_radius_buffer ), sphereRadii.data(), sphereRadii.size() * sizeof( float ),
                                     cudaMemcpyHostToDevice ) );
 
             OptixBuildInput sphere_input = {};
 
             sphere_input.type                      = OPTIX_BUILD_INPUT_TYPE_SPHERES;
             sphere_input.sphereArray.vertexBuffers = &d_vertex_buffer;
-            sphere_input.sphereArray.numVertices   = 1;
+            sphere_input.sphereArray.numVertices   = nbSpheres;
             sphere_input.sphereArray.radiusBuffers = &d_radius_buffer;
 
             uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
