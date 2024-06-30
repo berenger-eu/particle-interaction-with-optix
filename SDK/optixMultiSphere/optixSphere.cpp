@@ -164,7 +164,7 @@ int main( int argc, char* argv[] )
                                                    2.0f * (drand48() - 0.5f) );
                 const float  sphereRadius = 0.2;
                 sphereVertices.push_back( sphereVertex );
-                sphereRadii.push_back( sphereRadius );
+                sphereRadii.push_back( sphereRadius*(idxSphere+1) );
             }
 
             CUdeviceptr d_vertex_buffer;
