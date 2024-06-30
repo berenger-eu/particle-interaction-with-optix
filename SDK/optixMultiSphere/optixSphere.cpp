@@ -183,6 +183,7 @@ int main( int argc, char* argv[] )
             sphere_input.sphereArray.vertexBuffers = &d_vertex_buffer;
             sphere_input.sphereArray.numVertices   = nbSpheres;
             sphere_input.sphereArray.radiusBuffers = &d_radius_buffer;
+            sphere_input.sphereArray.singleRadius = 1;
 
             uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
             sphere_input.sphereArray.flags         = sphere_input_flags;
