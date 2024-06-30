@@ -479,7 +479,7 @@ int main( int argc, char* argv[] )
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( sbt.raygenRecord       ) ) );
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( sbt.missRecordBase     ) ) );
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( sbt.hitgroupRecordBase ) ) );
-                CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_gas_output_buffer    ) ) );
+                // Will be reused CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_gas_output_buffer    ) ) );
 
                 OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
                 OPTIX_CHECK( optixProgramGroupDestroy( hitgroup_prog_group ) );
@@ -488,7 +488,7 @@ int main( int argc, char* argv[] )
                 OPTIX_CHECK( optixModuleDestroy( module ) );
                 OPTIX_CHECK( optixModuleDestroy( sphere_module ) );
 
-                OPTIX_CHECK( optixDeviceContextDestroy( context ) );
+                // Will be reused OPTIX_CHECK( optixDeviceContextDestroy( context ) );
             }
         }
 
