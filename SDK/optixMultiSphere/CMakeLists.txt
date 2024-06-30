@@ -28,6 +28,7 @@
 
 OPTIX_add_sample_executable( optixMultiSphere target_name
   optixSphere.cu
+  optixLJ.cu
   optixSphere.cpp
   optixSphere.h
   OPTIONS -rdc true
