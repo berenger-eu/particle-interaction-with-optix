@@ -95,6 +95,7 @@ int main( int argc, char* argv[] )
     int         width  = 1024;
     int         height =  768;
     const int   nbSpheres = 10;
+    const float  sphereRadius = 0.2;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -162,7 +163,6 @@ int main( int argc, char* argv[] )
                 const float3 sphereVertex = make_float3( 2.0f * (drand48() - 0.5f), 
                                                    2.0f * (drand48() - 0.5f), 
                                                    2.0f * (drand48() - 0.5f) );
-                const float  sphereRadius = 0.2;
                 sphereVertices.push_back( sphereVertex );
             }
             
