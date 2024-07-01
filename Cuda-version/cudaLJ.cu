@@ -175,17 +175,18 @@ template <typename NumType>
 __global__ void InitParticles(const Point3D<NumType> inBoxWidth,
                               const Point3D<NumType> inCellWidth,
                               ParticlesContainer<NumType> inOutParticles,
+                              const NumType espilon,
                               curandState_t* particleCurandStates){
     const int nbThreads = blockDim.x * gridDim.x;
     const int uniqueIdx = blockIdx.x * blockDim.x + threadIdx.x;
     curandState_t curandState = particleCurandStates[uniqueIdx];
 
     for(int idxPart = uniqueIdx; idxPart < inOutParticles.nbParticles ; idxPart += nbThreads){
-        inOutParticles.x[idxPart] = curand_uniform(&curandState)* inBoxWidth.x;
+        inOutParticles.x[idxPart] = max(NumType(0), (curand_uniform(&curandState)-espilon)* inBoxWidth.x);
         assert(0 <= inOutParticles.x[idxPart] && inOutParticles.x[idxPart] < inBoxWidth.x);
-        inOutParticles.y[idxPart] = curand_uniform(&curandState)* inBoxWidth.y;
+        inOutParticles.y[idxPart] = max(NumType(0), (curand_uniform(&curandState)-espilon)* inBoxWidth.y);
         assert(0 <= inOutParticles.y[idxPart] && inOutParticles.y[idxPart] < inBoxWidth.y);
-        inOutParticles.z[idxPart] = curand_uniform(&curandState)* inBoxWidth.z;
+        inOutParticles.z[idxPart] = max(NumType(0), (curand_uniform(&curandState)-espilon)* inBoxWidth.z);
         assert(0 <= inOutParticles.z[idxPart] && inOutParticles.z[idxPart] < inBoxWidth.z);
         inOutParticles.index[idxPart] = idxPart;
         inOutParticles.v[idxPart] = -1;
@@ -317,20 +318,12 @@ template <typename NumType>
 __global__ void ComputeNbParticlePerCells(const Point3D<NumType> inCellWidth,
                                         const Point3D<int> inGridDim,
                                         const ParticlesContainer<NumType> inParticles,
-                                        int* inOutParticlePerCells,
-                                        int* inOutMaxNbPartPerCell){
+                                        int* inOutParticlePerCells){
     const int nbThreads = blockDim.x * gridDim.x;
     const int uniqueIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
     int currentCellId = -1;
     int currentCellAddition = 0;
-    int maxNbPartPerCell = 0;
-
-    __shared__ int sharedMaxNbPartPerCell;
-    if(threadIdx.x == 0){
-        sharedMaxNbPartPerCell = 0;
-    }
-    __syncthreads();
 
     for(int idxPart = uniqueIdx ; idxPart < inParticles.nbParticles ; idxPart += nbThreads){
         // Compute new cell coord
@@ -344,7 +337,6 @@ __global__ void ComputeNbParticlePerCells(const Point3D<NumType> inCellWidth,
         if(cellIdx != currentCellId){
             if(currentCellId != -1){
                 const int old = atomicAdd(&inOutParticlePerCells[currentCellId], currentCellAddition) + currentCellAddition;
-                maxNbPartPerCell = M_Max(maxNbPartPerCell, old);
             }
             // Reset the counters
             currentCellId = cellIdx;
@@ -356,14 +348,6 @@ __global__ void ComputeNbParticlePerCells(const Point3D<NumType> inCellWidth,
     // Save the remaining
     if(currentCellId != -1){
         const int old = atomicAdd(&inOutParticlePerCells[currentCellId], currentCellAddition) + currentCellAddition;
-        maxNbPartPerCell = M_Max(maxNbPartPerCell, old);
-    }
-
-    // Save the max
-    atomicMax(&sharedMaxNbPartPerCell, maxNbPartPerCell);
-    __syncthreads();
-    if(threadIdx.x == 0){
-        atomicMax(inOutMaxNbPartPerCell, sharedMaxNbPartPerCell);
     }
 }
 
@@ -481,14 +465,11 @@ void deletePtrs(std::list<void*>& inPtrToDelete){
 
 struct ResultFrame{
     struct AResult{
-        double time;
+        double timeInit;
+        double timeCompute;
+        double timeTotal;
         double gflops;
         double interactionsPerSecond;
-    };
-    struct V2Stats{
-        int nbBlocks;
-        int nbThreads;
-        int smSize;
     };
 
     int nbParticles;
@@ -526,21 +507,26 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     std::cout << " - Avergage particles per cell: " << double(inNbParticles)/NbCells << std::endl;
     std::cout << " - Number of CUDA blocks: " << DefaultNbBlocks << std::endl;
     std::cout << " - Number of CUDA threads: " << DefaultNbThreads << std::endl;
+    const double expectedAveragePartPerCell = inNbParticles/double(GridDim.x*GridDim.y*GridDim.z);
+    const long int expectedNbInteractions = expectedAveragePartPerCell*27*inNbParticles*inNbLoops;
+    std::cout << " - Expected number of interactions: " << expectedNbInteractions << std::endl;
+
+    // Number of flops per interaction
+    const int NbFlopsPerInteraction = 18;
+    std::cout << " - Number of flops per interaction: " << NbFlopsPerInteraction << std::endl;
 
     // Allocate the particles
     ParticlesContainer<NumType> particles     = AllocateParticles<NumType>(inNbParticles, cuPtrToDelete);
+    ParticlesContainer<NumType> particlesSwap = AllocateParticles<NumType>(inNbParticles, cuPtrToDelete);
 
     // Random states
+    curandState_t* particleCurandStates;
     {
-        curandState_t* particleCurandStates;
         CUDA_ASSERT( cudaMalloc(&particleCurandStates, DefaultNbBlocks*DefaultNbThreads*sizeof(curandState_t)));
+        cuPtrToDelete.push_back(particleCurandStates);
+
         InitRandStates<<<DefaultNbBlocks, DefaultNbThreads>>>(particleCurandStates, DefaultNbBlocks*DefaultNbThreads);
         CUDA_ASSERT( cudaDeviceSynchronize());
-
-        // Init particles and set random positions
-        InitParticles<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, particleCurandStates);
-        CUDA_ASSERT( cudaDeviceSynchronize());
-        CUDA_ASSERT( cudaFree(particleCurandStates) );
     }
 
     // The number of particles for each cell
@@ -548,74 +534,65 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     {
         CUDA_ASSERT( cudaMalloc(&particlePerCells, NbCells*sizeof(int)));
         cuPtrToDelete.push_back(particlePerCells);
-        CUDA_ASSERT( cudaMemset(particlePerCells, 0, NbCells*sizeof(int)) );
     }
-
-    // Find out the number of particles per cells
-    int maxNbPartPerCell = -1;
-    {
-        int* cuMaxNbPartPerCell;
-        CUDA_ASSERT( cudaMalloc(&cuMaxNbPartPerCell, sizeof(int)) );
-        CUDA_ASSERT( cudaMemset(cuMaxNbPartPerCell, 0, sizeof(int)) );
-        ComputeNbParticlePerCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth, GridDim, particles, particlePerCells, cuMaxNbPartPerCell);
-        CUDA_ASSERT( cudaDeviceSynchronize());
-
-        CUDA_ASSERT( cudaMemcpy(&maxNbPartPerCell, cuMaxNbPartPerCell, sizeof(int), cudaMemcpyDeviceToHost) );
-
-        std::cout << " - Max particles per cell: " << maxNbPartPerCell << std::endl;
-    }
-
     // Prefix sum for the particles per cells
     int* prefixParCell;
     {
         CUDA_ASSERT( cudaMalloc(&prefixParCell, (NbCells+1)*sizeof(int)));
-        CUDA_ASSERT( cudaMemset(prefixParCell, 0, (NbCells+1)*sizeof(int)) );
         cuPtrToDelete.push_back(prefixParCell);
-
-        // Compute the prefix
-        cudaStream_t stream;
-        CUDA_ASSERT(cudaStreamCreate(&stream));
-        PrefixFullV2(particlePerCells, prefixParCell+1, NbCells, stream);
-        CUDA_ASSERT(cudaStreamSynchronize(stream));
-        CUDA_ASSERT(cudaStreamDestroy(stream));
     }
-
+    cudaStream_t stream;
+    CUDA_ASSERT(cudaStreamCreate(&stream));
     // Build the cells (nb particles and offset in the container)
     CellDescriptor* cells;
     {
         CUDA_ASSERT( cudaMalloc(&cells, NbCells*sizeof(CellDescriptor)) );
-        CUDA_ASSERT( cudaMemset(cells, 0, NbCells*sizeof(CellDescriptor)) );
         cuPtrToDelete.push_back(cells);
-
-        // Init the cells
-        InitNewCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(prefixParCell, cells, NbCells);
-        CUDA_ASSERT( cudaDeviceSynchronize());
     }
-    // Move particles to new cells (reorder the particles)
-    {
-        // Reset the array to reuse it as ticket
-        CUDA_ASSERT( cudaMemset(particlePerCells, 0, NbCells*sizeof(int)) );
-
-        std::list<void*> cuPtrToDeleteSwap;
-        ParticlesContainer<NumType> particlesSwap = AllocateParticles<NumType>(inNbParticles, cuPtrToDeleteSwap);
-        MoveParticlesToNewCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth, GridDim, particles,
-                                                                            particlesSwap, particlePerCells, cells);
-        CUDA_ASSERT( cudaDeviceSynchronize());
-        particles.copy(particlesSwap);
-        for(void* ptrToFree : cuPtrToDeleteSwap){
-            CUDA_ASSERT( cudaFree(ptrToFree) );
-        }
-    }
-
-    // Number of flops per interaction
-    const int NbFlopsPerInteraction = 18;
-    std::cout << " - NbFlopsPerInteraction: " << NbFlopsPerInteraction << std::endl;
-
     // Compute the number of interactions
     unsigned long long int NbInteractions = 0;
+    unsigned long long int* cuNbInteractions;
     {
-        unsigned long long int* cuNbInteractions;
         CUDA_ASSERT( cudaMalloc(&cuNbInteractions, sizeof(unsigned long long int)) );
+        cuPtrToDelete.push_back(cuNbInteractions);
+    }
+
+    std::vector<ResultFrame::AResult> results;
+
+    SpTimer initTimer;
+    SpTimer computeTimer;
+
+    for(int idxLoop = 0 ; idxLoop < inNbLoops ; ++idxLoop){
+        // Init particles and set random positions
+        InitParticles<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, 
+                                                                      std::numeric_limits<NumType>::epsilon(),
+                                                                      particleCurandStates);
+        CUDA_ASSERT( cudaDeviceSynchronize());
+
+        initTimer.start();
+        CUDA_ASSERT( cudaMemset(particlePerCells, 0, NbCells*sizeof(int)) );
+
+        // Find out the number of particles per cells
+        ComputeNbParticlePerCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth, GridDim, particles, particlePerCells);
+        CUDA_ASSERT( cudaDeviceSynchronize());
+
+        // Compute the prefix
+        CUDA_ASSERT( cudaMemset(prefixParCell, 0, (NbCells+1)*sizeof(int)) );
+        PrefixFullV2(particlePerCells, prefixParCell+1, NbCells, stream);
+        CUDA_ASSERT(cudaStreamSynchronize(stream));
+
+        // Init the cells
+        CUDA_ASSERT( cudaMemset(cells, 0, NbCells*sizeof(CellDescriptor)) );
+        InitNewCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(prefixParCell, cells, NbCells);
+        CUDA_ASSERT( cudaDeviceSynchronize());
+        
+        // Reset the array to reuse it as ticket
+        CUDA_ASSERT( cudaMemset(particlePerCells, 0, NbCells*sizeof(int)) );
+        MoveParticlesToNewCells<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth, GridDim, particles,
+                                                                            particlesSwap, particlePerCells, cells);
+        particlesSwap.swap(particles);
+        initTimer.stop();
+
         CUDA_ASSERT( cudaMemset(cuNbInteractions, 0, sizeof(unsigned long long int)) );
         ComputeNbInteractions<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth, 
                                                                         GridDim, 
@@ -623,52 +600,39 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
                                                                         cells,
                                                                         cuNbInteractions);
         CUDA_ASSERT( cudaDeviceSynchronize());
+        unsigned long long int newNbInteractions = 0;
+        CUDA_ASSERT( cudaMemcpy(&newNbInteractions, cuNbInteractions, sizeof(unsigned long long int), cudaMemcpyDeviceToHost) );
+        NbInteractions += newNbInteractions;
 
-        CUDA_ASSERT( cudaMemcpy(&NbInteractions, cuNbInteractions, sizeof(unsigned long long int), cudaMemcpyDeviceToHost) );
-
-        std::cout << " - NbInteractions: " << NbInteractions << std::endl;
+        computeTimer.start();
+        ComputeParticleInterationsParPartNoLoop<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth,
+                                                                GridDim,
+                                                                particles,
+                                                                cells);
+        CUDA_ASSERT( cudaDeviceSynchronize());
+        computeTimer.stop();
     }
 
+    CUDA_ASSERT(cudaStreamDestroy(stream));
 
-    std::vector<ResultFrame::AResult> results;
+    std::cout << " - Nb interactions: " << NbInteractions << std::endl;
+    std::cout << " - Time init: " << initTimer.getCumulated() << "s" << std::endl;
+    std::cout << " - Time compute: " << computeTimer.getCumulated() << "s" << std::endl;
+    std::cout << " - Total: " << (initTimer.getCumulated() + computeTimer.getCumulated()) << "s" << std::endl;
 
-    /////////////////////////////////////////////////////////////////////////////
-    {
-        std::cout << "# Par-Part-NoLoop:" << std::endl;
-        
-        std::list<void*> localCuPtrToDelete;
-        ParticlesContainer<NumType> particles_original = AllocateParticles<NumType>(inNbParticles, localCuPtrToDelete);
-        particles_original.copy(particles);
-        CUDA_ASSERT( cudaDeviceSynchronize());
-        SpTimer timer;
-        for(int idxLoop = 0 ; idxLoop < inNbLoops ; ++idxLoop){
-            ComputeParticleInterationsParPartNoLoop<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(CellWidth,
-                                                                            GridDim,
-                                                                            particles_original,
-                                                                            cells);
-        }
-        CUDA_ASSERT( cudaDeviceSynchronize());
-        timer.stop();
-        std::cout << " - Time: " << timer.getElapsed() << "s" << std::endl;
-        std::cout << " - Per iterations: " << timer.getElapsed()/inNbLoops << "s" << std::endl;
-        std::cout << " - Per interations: " << timer.getElapsed()/(inNbLoops*NbInteractions) << "s" << std::endl;
-        std::cout << " - GFlops/s: " << (inNbLoops*NbInteractions*NbFlopsPerInteraction)/timer.getElapsed()/1e9 << std::endl;
-
-        if(inCheckResult){
-            std::cout << "Check particles_original" << std::endl;
-            CheckEqualCpu<NumType>(particles, particles_original);
-            CheckEqual<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(particles, particles_original);
-            CUDA_ASSERT( cudaDeviceSynchronize());
-        }
-        deletePtrs(localCuPtrToDelete);
-
-        results.push_back(ResultFrame::AResult{timer.getElapsed()/inNbLoops, 
-                (inNbLoops*NbInteractions*NbFlopsPerInteraction)/timer.getElapsed()/1e9, 
-                NbInteractions/timer.getElapsed()});
-    }
-    /////////////////////////////////////////////////////////////////////////////
+    std::cout << " - Per interactions: " << (initTimer.getCumulated() + computeTimer.getCumulated())/NbInteractions << std::endl;
+    std::cout << " - GFlops/s: " << (NbInteractions*NbFlopsPerInteraction)/(initTimer.getCumulated() + computeTimer.getCumulated())/1e9 << std::endl;
+    std::cout << "     - Compute only GFlops/s: " << (NbInteractions*NbFlopsPerInteraction)/computeTimer.getCumulated()/1e9 << std::endl;
+    std::cout << " - Interactions/s: " << NbInteractions/(initTimer.getCumulated() + computeTimer.getCumulated()) << std::endl;
 
     deletePtrs(cuPtrToDelete);
+
+    results.push_back(ResultFrame::AResult{
+        initTimer.getCumulated(),
+        computeTimer.getCumulated(),
+        (initTimer.getCumulated() + computeTimer.getCumulated()), 
+        (NbInteractions*NbFlopsPerInteraction)/(initTimer.getCumulated() + computeTimer.getCumulated())/1e9, 
+        NbInteractions/(initTimer.getCumulated() + computeTimer.getCumulated())});
 
     return std::make_tuple(NbInteractions, std::move(results));
 }
@@ -732,19 +696,14 @@ int main(){
     // Open the file
     std::ofstream file(getFilename());
     {
-        file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,interactionsperparticle,Par-Part-NoLoop-time,Par-Part-NoLoop-gflops,Par-Part-NoLoop-interactionsPerSecond";
+        file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,interactionsperparticle,Par-Part-NoLoop-timeinit,Par-Part-NoLoop-timecompute,Par-Part-NoLoop-timetotal,Par-Part-NoLoop-gflops,Par-Part-NoLoop-interactionsPerSecond";
         file << std::endl;
     }
     for(const ResultFrame& frame : allResults){
         file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
         file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
         for(const ResultFrame::AResult& res : frame.results){
-            if(res.time != 0){
-                file << "," << res.time << "," << res.gflops << "," << res.interactionsPerSecond;
-            }
-            else{
-                file << "," << "" << "," << "" << "," << "";   
-            }
+            file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal << "," << res.gflops << "," << res.interactionsPerSecond;
         }
         file << std::endl;
     }
