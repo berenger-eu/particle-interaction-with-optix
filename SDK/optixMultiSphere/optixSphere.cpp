@@ -698,19 +698,21 @@ int main( int argc, char* argv[] )
             // launch
             //
             {
-                std::vector<Point> sphereVerticesCopy;
-                for(auto pos : sphereVertices)
+                const size_t sphereVerticesCopyLeadingDim = ((nbSpheres+31)/32)*32;
+                std::vector<float> sphereVerticesCopy(sphereVerticesCopyLeadingDim*3);
+                for(size_t idxPos = 0 ; idxPos < sphereVertices.size() ; ++idxPos)
                 {
-                    Point point;
-                    point.position = pos;
-                    sphereVerticesCopy.push_back(point);
+                    const auto pos = sphereVertices[idxPos];
+                    sphereVerticesCopy[idxPos] = pos.x;
+                    sphereVerticesCopy[idxPos + sphereVerticesCopyLeadingDim] = pos.y;
+                    sphereVerticesCopy[idxPos + sphereVerticesCopyLeadingDim*2] = pos.z;
                 }
                 CUdeviceptr d_sphereVertices;
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_sphereVertices ), 
-                                        sphereVerticesCopy.size() * sizeof( Point ) ) );
+                                        sphereVerticesCopyLeadingDim*3 * sizeof( float ) ) );
                 CUDA_CHECK( cudaMemcpy(
                             reinterpret_cast<void*>( d_sphereVertices ),
-                            sphereVerticesCopy.data(), sphereVerticesCopy.size() * sizeof( Point ),
+                            sphereVerticesCopy.data(), sphereVerticesCopyLeadingDim*3 * sizeof( float ),
                             cudaMemcpyHostToDevice
                             ) );
             
@@ -720,7 +722,8 @@ int main( int argc, char* argv[] )
 
                 ParamsLJ params;
                 params.num_points = nbSpheres;
-                params.points     = reinterpret_cast<Point*>(d_sphereVertices);
+                params.leading_dim = sphereVerticesCopyLeadingDim;
+                params.points     = reinterpret_cast<float*>(d_sphereVertices);
                 params.c          = sphereRadius;
                 params.energy     = reinterpret_cast<float*>(output_buffer);
                 params.handle     = gas_handle;

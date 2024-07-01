@@ -59,13 +59,10 @@ struct HitGroupData
 
 // For optixLJ.cu
 
-struct Point {
-    float3 position;
-};
-
 struct ParamsLJ {
     int num_points;
-    Point* points;
+    size_t leading_dim;
+    float* points;
     float c;
     float* energy;
     OptixTraversableHandle handle;

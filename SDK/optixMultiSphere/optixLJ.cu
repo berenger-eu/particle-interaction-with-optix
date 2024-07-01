@@ -87,13 +87,16 @@ extern "C" __global__ void __raygen__rg()
     const int ray_index = idx.y;
 
     const RayGenDataLJ* rtData = (RayGenDataLJ*)optixGetSbtDataPointer();
-    const Point point = params.points[point_index];
+    float3 point;
+    point.x = params.points[point_index];
+    point.y = params.points[point_index + params.leading_dim];
+    point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
 
     const float3 ray_origins[3] = {
-        make_float3(point.position.x - c, point.position.y, point.position.z),
-        make_float3(point.position.x, point.position.y - c, point.position.z),
-        make_float3(point.position.x, point.position.y, point.position.z - c)
+        make_float3(point.x - c, point.y, point.z),
+        make_float3(point.x, point.y - c, point.z),
+        make_float3(point.x, point.y, point.z - c)
     };
 
     const float3 ray_directions[3] = {
