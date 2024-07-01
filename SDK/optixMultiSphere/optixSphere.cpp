@@ -170,8 +170,8 @@ int main( int argc, char* argv[] )
                                                    2.0f * (drand48() - 0.5f) );
                 sphereVertices.push_back( sphereVertex );
             }
-            
-            sphereRadii.push_back( sphereRadius );
+            // We add espilon to radius to avoid numerical issues
+            sphereRadii.push_back( sphereRadius + 1e-5f );
 
             CUdeviceptr d_vertex_buffer;
             CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sphereVertices.size() * sizeof( float3 ) ) );
@@ -670,14 +670,17 @@ int main( int argc, char* argv[] )
 
                 sbt.raygenRecord                = raygen_record;
                 sbt.missRecordBase              = miss_record;
-                sbt.missRecordStrideInBytes     = sizeof( MissSbtRecord );
+                sbt.missRecordStrideInBytes     = sizeof( MissSbtRecordLJ );
                 sbt.missRecordCount             = 1;
                 sbt.hitgroupRecordBase          = hitgroup_record;
-                sbt.hitgroupRecordStrideInBytes = sizeof( HitGroupSbtRecord );
+                sbt.hitgroupRecordStrideInBytes = sizeof( HitGroupSbtRecordLJ );
                 sbt.hitgroupRecordCount         = 1;
             }
 
-            sutil::CUDAOutputBuffer<float> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, nbSpheres, 1 );
+            CUdeviceptr output_buffer;
+            {
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &output_buffer ), nbSpheres * sizeof( float ) ) );
+            }
 
             //
             // launch
@@ -707,7 +710,7 @@ int main( int argc, char* argv[] )
                 params.num_points = nbSpheres;
                 params.points     = reinterpret_cast<Point*>(d_sphereVertices);
                 params.c          = sphereRadius;
-                params.energy     = output_buffer.map();
+                params.energy     = reinterpret_cast<float*>(output_buffer);
                 params.handle     = gas_handle;
 
                 CUdeviceptr d_param;
@@ -718,11 +721,11 @@ int main( int argc, char* argv[] )
                             cudaMemcpyHostToDevice
                             ) );
 
+                const int nbRays = 3;
                 OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( ParamsLJ ), 
-                                          &sbt, nbSpheres, 3, /*depth=*/1 ) );
+                                          &sbt, nbSpheres, nbRays, /*depth=*/1 ) );
                 CUDA_SYNC_CHECK();
 
-                output_buffer.unmap();
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_param ) ) );
             }
 
@@ -743,6 +746,9 @@ int main( int argc, char* argv[] )
                 OPTIX_CHECK( optixModuleDestroy( sphere_module ) );
 
                 OPTIX_CHECK( optixDeviceContextDestroy( context ) );
+
+                // Added
+                CUDA_CHECK( cudaFree( reinterpret_cast<void*>( output_buffer ) ) );
             }
         }
     }
