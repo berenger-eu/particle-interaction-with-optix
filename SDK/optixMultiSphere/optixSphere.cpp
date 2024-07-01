@@ -81,6 +81,7 @@ void printUsageAndExit( const char* argv0 )
 {
     std::cerr << "Usage  : " << argv0 << " [options]\n";
     std::cerr << "Options: --file | -f <filename>      Specify file for image output\n";
+    std::cerr << "         --nbspheres | -ns           Specify the number of particles/spheres\n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 512x384\n";
     exit( 1 );
@@ -99,7 +100,7 @@ int main( int argc, char* argv[] )
     std::string outfile;
     int         width  = 1024;
     int         height =  768;
-    const int   nbSpheres = 10;
+    int         nbSpheres = 10;
     const float  sphereRadius = 0.2;
     std::vector<float3> sphereVertices;
 
@@ -115,6 +116,17 @@ int main( int argc, char* argv[] )
             if( i < argc - 1 )
             {
                 outfile = argv[++i];
+            }
+            else
+            {
+                printUsageAndExit( argv[0] );
+            }
+        }
+        else if( arg == "--nbspheres" || arg == "-ns" )
+        {
+            if( i < argc - 1 )
+            {
+                nbSpheres = atoi(argv[++i]);
             }
             else
             {
