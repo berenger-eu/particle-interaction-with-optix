@@ -34,7 +34,7 @@
 #include <sutil/vec_math.h>
 
 extern "C" {
-__constant__ Params params;
+__constant__ ParamsLJ params;
 }
 
 
@@ -44,13 +44,12 @@ static __forceinline__ __device__ void trace(
         float3                 ray_direction,
         float                  tmin,
         float                  tmax,
-        float3*                prd
+        float*                 energy
         )
 {
-    unsigned int p0, p1, p2;
-    p0 = __float_as_uint( prd->x );
-    p1 = __float_as_uint( prd->y );
-    p2 = __float_as_uint( prd->z );
+    unsigned int p0;
+    p0 = __float_as_uint( *energy );
+
     optixTrace(
             handle,
             ray_origin,
@@ -63,73 +62,90 @@ static __forceinline__ __device__ void trace(
             0,                   // SBT offset
             0,                   // SBT stride
             0,                   // missSBTIndex
-            p0, p1, p2 );
-    prd->x = __uint_as_float( p0 );
-    prd->y = __uint_as_float( p1 );
-    prd->z = __uint_as_float( p2 );
+            p0);
+
+    (*energy) = __uint_as_float( p0 );
+}
+
+static __forceinline__ __device__ void setPayloadEnergy( float p )
+{
+    optixSetPayload_0( __float_as_uint( p ) );
 }
 
 
-static __forceinline__ __device__ void setPayload( float3 p )
+static __forceinline__ __device__ float getPayloadEnergy()
 {
-    optixSetPayload_0( __float_as_uint( p.x ) );
-    optixSetPayload_1( __float_as_uint( p.y ) );
-    optixSetPayload_2( __float_as_uint( p.z ) );
-}
-
-
-static __forceinline__ __device__ float3 getPayload()
-{
-    return make_float3(
-            __uint_as_float( optixGetPayload_0() ),
-            __uint_as_float( optixGetPayload_1() ),
-            __uint_as_float( optixGetPayload_2() )
-            );
+    return __uint_as_float( optixGetPayload_0() );
 }
 
 
 extern "C" __global__ void __raygen__rg()
 {
     const uint3 idx = optixGetLaunchIndex();
-    const uint3 dim = optixGetLaunchDimensions();
+    // const uint3 dim = optixGetLaunchDimensions();
+    const int point_index = idx.x;
+    const int ray_index = idx.y;
 
-    const RayGenData* rtData = (RayGenData*)optixGetSbtDataPointer();
-    const float3      U      = rtData->camera_u;
-    const float3      V      = rtData->camera_v;
-    const float3      W      = rtData->camera_w;
-    const float2      d = 2.0f * make_float2(
-            static_cast<float>( idx.x ) / static_cast<float>( dim.x ),
-            static_cast<float>( idx.y ) / static_cast<float>( dim.y )
-            ) - 1.0f;
+    const RayGenDataLJ* rtData = (RayGenDataLJ*)optixGetSbtDataPointer();
+    const Point point = params.points[point_index];
+    const float c = params.c;
 
-    const float3 origin      = rtData->cam_eye;
-    const float3 direction   = normalize( d.x * U + d.y * V + W );
-    float3       payload_rgb = make_float3( 0.5f, 0.5f, 0.5f );
+    const float3 ray_origins[3] = {
+        make_float3(point.position.x - c, point.position.y, point.position.z),
+        make_float3(point.position.x, point.position.y - c, point.position.z),
+        make_float3(point.position.x, point.position.y, point.position.z - c)
+    };
+
+    const float3 ray_directions[3] = {
+        make_float3(2 * c, 0, 0),
+        make_float3(0, 2 * c, 0),
+        make_float3(0, 0, 2 * c)
+    };
+
+    const float3 origin = ray_origins[ray_index];
+    const float3 direction = normalize(ray_directions[ray_index]);
+
+    float payload_energy = 0;
     trace( params.handle,
             origin,
             direction,
             0.00f,  // tmin
-            1e16f,  // tmax
-            &payload_rgb );
+            2 * c,  // tmax
+            &payload_energy );
 
-    params.image[idx.y * params.image_width + idx.x] = make_color( payload_rgb );
+    params.energy[point_index] += payload_energy;
 }
 
 
 extern "C" __global__ void __miss__ms()
 {
-    MissData* rt_data  = reinterpret_cast<MissData*>( optixGetSbtDataPointer() );
-    float3    payload = getPayload();
-    setPayload( make_float3( rt_data->r, rt_data->g, rt_data->b ) );
+    // setPayloadEnergy(0.0f);
+}
+
+
+static __forceinline__ __device__  float distance(const float3 p1,
+                                                  const float3 p2) {
+    // Particles are distributed randomly in the box, so we need a softening factor
+    const float softening = 1e-5;
+    return sqrt((p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y) + (p2.z - p1.z)*(p2.z - p1.z) + softening);
+}
+
+// Function to calculate the Lennard-Jones potential between two particles
+static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1, 
+                                                                const float3 p2, 
+                                                                const float epsilon, 
+                                                                const float sigma) {
+    const float r = distance(p1, p2);
+    const float sigma_d_r = sigma / r;
+    const float r6 = (sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r);
+    const float r12 = r6 * r6;
+    const float result = float(4) * epsilon * (r12 - r6);
+    return result;
 }
 
 
 extern "C" __global__ void __closesthit__ch()
 {
-    float  t_hit = optixGetRayTmax();
-    // Backface hit not used.
-    //float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
-
     const float3 ray_orig = optixGetWorldRayOrigin();
     const float3 ray_dir  = optixGetWorldRayDirection();
 
@@ -141,10 +157,18 @@ extern "C" __global__ void __closesthit__ch()
     // sphere center (q.x, q.y, q.z), sphere radius q.w
     optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, &q );
 
-    float3 world_raypos = ray_orig + t_hit * ray_dir;
-    float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
-    float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
-    float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
+    // float  t_hit = optixGetRayTmax();
+    // Backface hit not used.
+    // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
+    // float3 world_raypos = ray_orig + t_hit * ray_dir;
+    // float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
+    // float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
+    // float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
 
-    setPayload( world_normal * 0.5f + 0.5f );
+    const float epsilon = 1.0f;
+    const float sigma = 1.0f;
+    const float energy = lennardJonesPotential(ray_orig, make_float3(q.x, q.y, q.z), 
+                                               epsilon, sigma);
+
+    setPayloadEnergy( energy );
 }

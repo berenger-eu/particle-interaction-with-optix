@@ -62,6 +62,11 @@ typedef SbtRecord<MissData>     MissSbtRecord;
 typedef SbtRecord<HitGroupData> HitGroupSbtRecord;
 
 
+typedef SbtRecord<RayGenDataLJ>   RayGenSbtRecordLJ;
+typedef SbtRecord<MissDataLJ>     MissSbtRecordLJ;
+typedef SbtRecord<HitGroupDataLJ> HitGroupSbtRecordLJ;
+
+
 void configureCamera( sutil::Camera& cam, const uint32_t width, const uint32_t height )
 {
     cam.setEye( {0.0f, 0.0f, 3.0f} );
@@ -96,6 +101,7 @@ int main( int argc, char* argv[] )
     int         height =  768;
     const int   nbSpheres = 10;
     const float  sphereRadius = 0.2;
+    std::vector<float3> sphereVertices;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -156,7 +162,6 @@ int main( int argc, char* argv[] )
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
             // sphere build input
-            std::vector<float3> sphereVertices;
             std::vector<float> sphereRadii;
             for(int idxSphere = 0; idxSphere < nbSpheres; idxSphere++)
             {
@@ -509,14 +514,14 @@ int main( int argc, char* argv[] )
 
                 pipeline_compile_options.usesMotionBlur                   = false;
                 pipeline_compile_options.traversableGraphFlags            = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
-                pipeline_compile_options.numPayloadValues                 = 3;
+                pipeline_compile_options.numPayloadValues                 = 1;
                 pipeline_compile_options.numAttributeValues               = 1;
                 pipeline_compile_options.exceptionFlags                   = OPTIX_EXCEPTION_FLAG_NONE;
                 pipeline_compile_options.pipelineLaunchParamsVariableName = "params";
                 pipeline_compile_options.usesPrimitiveTypeFlags           = OPTIX_PRIMITIVE_TYPE_FLAGS_SPHERE;
 
                 size_t      inputSize = 0;
-                const char* input = sutil::getInputData( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "optixSphere.cu", inputSize );
+                const char* input = sutil::getInputData( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "optixLJ.cu", inputSize );
 
                 OPTIX_CHECK_LOG( optixModuleCreate( context, &module_compile_options, &pipeline_compile_options, input,
                                                     inputSize, LOG, &LOG_SIZE, &module ) );
@@ -628,14 +633,9 @@ int main( int argc, char* argv[] )
             OptixShaderBindingTable sbt = {};
             {
                 CUdeviceptr  raygen_record;
-                const size_t raygen_record_size = sizeof( RayGenSbtRecord );
+                const size_t raygen_record_size = sizeof( RayGenSbtRecordLJ );
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &raygen_record ), raygen_record_size ) );
-                sutil::Camera cam;
-                configureCamera( cam, width, height );
-                RayGenSbtRecord rg_sbt;
-                rg_sbt.data ={};
-                rg_sbt.data.cam_eye = cam.eye();
-                cam.UVWFrame( rg_sbt.data.camera_u, rg_sbt.data.camera_v, rg_sbt.data.camera_w );
+                RayGenSbtRecordLJ rg_sbt;
                 OPTIX_CHECK( optixSbtRecordPackHeader( raygen_prog_group, &rg_sbt ) );
                 CUDA_CHECK( cudaMemcpy(
                             reinterpret_cast<void*>( raygen_record ),
@@ -645,10 +645,9 @@ int main( int argc, char* argv[] )
                             ) );
 
                 CUdeviceptr miss_record;
-                size_t      miss_record_size = sizeof( MissSbtRecord );
+                size_t      miss_record_size = sizeof( MissSbtRecordLJ );
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &miss_record ), miss_record_size ) );
-                MissSbtRecord ms_sbt;
-                ms_sbt.data = { 0.3f, 0.1f, 0.2f };
+                MissSbtRecordLJ ms_sbt;
                 OPTIX_CHECK( optixSbtRecordPackHeader( miss_prog_group, &ms_sbt ) );
                 CUDA_CHECK( cudaMemcpy(
                             reinterpret_cast<void*>( miss_record ),
@@ -658,9 +657,9 @@ int main( int argc, char* argv[] )
                             ) );
 
                 CUdeviceptr hitgroup_record;
-                size_t      hitgroup_record_size = sizeof( HitGroupSbtRecord );
+                size_t      hitgroup_record_size = sizeof( HitGroupSbtRecordLJ );
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &hitgroup_record ), hitgroup_record_size ) );
-                HitGroupSbtRecord hg_sbt;
+                HitGroupSbtRecordLJ hg_sbt;
                 OPTIX_CHECK( optixSbtRecordPackHeader( hitgroup_prog_group, &hg_sbt ) );
                 CUDA_CHECK( cudaMemcpy(
                             reinterpret_cast<void*>( hitgroup_record ),
@@ -678,32 +677,49 @@ int main( int argc, char* argv[] )
                 sbt.hitgroupRecordCount         = 1;
             }
 
-            sutil::CUDAOutputBuffer<uchar4> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, width, height );
+            sutil::CUDAOutputBuffer<float> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, nbSpheres, 1 );
 
             //
             // launch
             //
             {
+                std::vector<Point> sphereVerticesCopy;
+                for(auto pos : sphereVertices)
+                {
+                    Point point;
+                    point.position = pos;
+                    sphereVerticesCopy.push_back(point);
+                }
+                CUdeviceptr d_sphereVertices;
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_sphereVertices ), 
+                                        sphereVerticesCopy.size() * sizeof( Point ) ) );
+                CUDA_CHECK( cudaMemcpy(
+                            reinterpret_cast<void*>( d_sphereVertices ),
+                            sphereVerticesCopy.data(), sphereVerticesCopy.size() * sizeof( Point ),
+                            cudaMemcpyHostToDevice
+                            ) );
+            
+
                 CUstream stream;
                 CUDA_CHECK( cudaStreamCreate( &stream ) );
 
-                Params params;
-                params.image        = output_buffer.map();
-                params.image_width  = width;
-                params.image_height = height;
-                params.origin_x     = width / 2;
-                params.origin_y     = height / 2;
-                params.handle       = gas_handle;
+                ParamsLJ params;
+                params.num_points = nbSpheres;
+                params.points     = reinterpret_cast<Point*>(d_sphereVertices);
+                params.c          = sphereRadius;
+                params.energy     = output_buffer.map();
+                params.handle     = gas_handle;
 
                 CUdeviceptr d_param;
-                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_param ), sizeof( Params ) ) );
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_param ), sizeof( ParamsLJ ) ) );
                 CUDA_CHECK( cudaMemcpy(
                             reinterpret_cast<void*>( d_param ),
                             &params, sizeof( params ),
                             cudaMemcpyHostToDevice
                             ) );
 
-                OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( Params ), &sbt, width, height, /*depth=*/1 ) );
+                OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( ParamsLJ ), 
+                                          &sbt, nbSpheres, 3, /*depth=*/1 ) );
                 CUDA_SYNC_CHECK();
 
                 output_buffer.unmap();

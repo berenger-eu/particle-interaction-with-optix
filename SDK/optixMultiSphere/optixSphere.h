@@ -26,6 +26,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+// For optixSphere.cu
+
 struct Params
 {
     uchar4*                image;
@@ -51,6 +53,37 @@ struct MissData
 
 
 struct HitGroupData
+{
+    // No data needed
+};
+
+// For optixLJ.cu
+
+struct Point {
+    float3 position;
+};
+
+struct ParamsLJ {
+    int num_points;
+    Point* points;
+    float c;
+    float* energy;
+    OptixTraversableHandle handle;
+};
+
+struct RayGenDataLJ
+{
+    // No data needed
+};
+
+
+struct MissDataLJ
+{
+    // No data needed
+};
+
+
+struct HitGroupDataLJ
 {
     // No data needed
 };
