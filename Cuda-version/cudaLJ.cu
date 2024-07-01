@@ -1,8 +1,29 @@
 #include <iostream>
-#include <list>
 #include <vector>
-#include <iostream>
+#include <random>
+#include <cassert>
+#include <algorithm>
+#include <vector>
+#include <list>
 
+#include <cuda_runtime.h>
+#include <curand.h>
+#include <curand_kernel.h>
+
+#include "SpTimer.hpp"
+#include "point3d.hpp"
+#include "prefixsum.hpp"
+
+#ifndef CUDA_ASSERT
+#define CUDA_ASSERT(X)\
+{\
+    cudaError_t ___resCuda = (X);\
+    if ( cudaSuccess != ___resCuda ){\
+    printf("Error: fails, %s (%s line %d)\nbCols", cudaGetErrorString(___resCuda), __FILE__, __LINE__ );\
+    exit(1);\
+    }\
+    }
+#endif
 
 template <class NumType>
 __device__ __host__ NumType distance(const Point3D<NumType>& p1, const Point3D<NumType>& p2) {
@@ -202,6 +223,50 @@ __global__ void CheckEqual(const ParticlesContainer<NumType> inParticles1,
         }
         assert(diff <= 1e-5);
     }
+}
+
+
+template <typename NumType>
+__global__ void ComputeNbInteractions(const Point3D<NumType> inCellWidth,
+                                           const Point3D<int> inGridDim,
+                                           ParticlesContainer<NumType> inOutParticles,
+                                           const CellDescriptor* inCells,
+                                           unsigned long long int* inOutNbInteractions){
+    const int nbThreads = blockDim.x * gridDim.x;
+    const int uniqueIdx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    unsigned long long int nbInteractions = 0;
+
+    for(int idxPart = uniqueIdx ; idxPart < inOutParticles.nbParticles ; idxPart += nbThreads){
+        NumType potential = 0;
+        Point3D<NumType> partPos;
+        partPos.x = inOutParticles.x[idxPart];
+        partPos.y = inOutParticles.y[idxPart];
+        partPos.z = inOutParticles.z[idxPart];
+        // Compute new cell coord
+        const Point3D<int> coord = PosToCellCoord(inCellWidth, partPos);
+        assert(partPos.x < inGridDim.x && partPos.y < inGridDim.y && partPos.z < inGridDim.z);
+
+        const int cellIdx = CellCoordToIndex(inGridDim, coord);
+        {// Current cell
+            const CellDescriptor currentCell = inCells[cellIdx];
+            nbInteractions += currentCell.nbParticleInCell-1;
+        }
+
+        for(int idxCellX = M_Max(0, coord.x - 1) ; idxCellX <= M_Min(inGridDim.x-1, coord.x + 1) ; ++idxCellX){
+            for(int idxCellY = M_Max(0, coord.y - 1) ; idxCellY <= M_Min(inGridDim.y-1, coord.y + 1) ; ++idxCellY){
+                for(int idxCellZ = M_Max(0, coord.z - 1) ; idxCellZ <= M_Min(inGridDim.z-1, coord.z + 1) ; ++idxCellZ){
+                    if(idxCellX != coord.x || idxCellY != coord.y || idxCellZ != coord.z){
+                        const Point3D<int> otherCellCoord{idxCellX, idxCellY, idxCellZ};
+                        const int otherCellIdx = CellCoordToIndex(inGridDim, otherCellCoord);
+                        const CellDescriptor otherCell = inCells[otherCellIdx];
+                        nbInteractions += otherCell.nbParticleInCell;
+                    }
+                }
+            }
+        }
+    }
+    atomicAdd(inOutNbInteractions, nbInteractions);
 }
 
 template <typename NumType>
