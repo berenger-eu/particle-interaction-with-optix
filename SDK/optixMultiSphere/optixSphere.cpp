@@ -754,6 +754,9 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                 const auto posTarget = sphereVertices[idxTarget];
                 const auto diff = posSource - posTarget;
                 const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+                std::cout << "Distance between " << idxSource << " and " << idxTarget << " is " << dist << std::endl;
+                std::cout << " - positions are " << posSource.x << " " << posSource.y << " " << posSource.z << std::endl;
+                std::cout << " - positions are " << posTarget.x << " " << posTarget.y << " " << posTarget.z << std::endl;
                 if(dist < sphereRadius){
                     energy += 1;// TODO 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
                 }
