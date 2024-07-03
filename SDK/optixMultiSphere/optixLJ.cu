@@ -71,6 +71,7 @@ static __forceinline__ __device__ void trace(
                 p0, p1, p2, p3, p4);
 
         tmin = __uint_as_float( p4 );
+        printf("tmin: %f\n", tmin);
     }
     
     (*energy) += __uint_as_float( p3 );
