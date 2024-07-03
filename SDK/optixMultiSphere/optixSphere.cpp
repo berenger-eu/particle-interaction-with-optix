@@ -133,9 +133,9 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
             std::vector<float> sphereRadii;
             for(int idxSphere = 0; idxSphere < nbSpheres; idxSphere++)
             {
-                const float3 sphereVertex = make_float3( 2.0f * (drand48() - 0.5f), 
-                                                   2.0f * (drand48() - 0.5f), 
-                                                   2.0f * (drand48() - 0.5f) );
+                const float3 sphereVertex = make_float3( 1.0f * (drand48()), 
+                                                   1.0f * (drand48()), 
+                                                   1.0f * (drand48()) );
                 sphereVertices.push_back( sphereVertex );
             }
             // We add espilon to radius to avoid numerical issues
