@@ -79,11 +79,6 @@ static __forceinline__ __device__ void trace(
     (*energy) += __uint_as_float( p3 );
 }
 
-static __forceinline__ __device__ void setPayloadC( float c )
-{
-    optixSetPayload_5( __float_as_uint( c ) );
-}
-
 
 static __forceinline__ __device__ float getPayloadC()
 {
