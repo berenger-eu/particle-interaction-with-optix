@@ -230,11 +230,12 @@ extern "C" __global__ void __closesthit__ch()
             const float3 ray_orig = optixGetWorldRayOrigin();
             float  t_hit = optixGetRayTmax();
             float3 world_raypos = ray_orig + t_hit * ray_dir;
-            printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f, ray_orig %f %f %f, dist_axis_squared %f %f %f\n", 
+            printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f, ray_orig %f %f %f, dist_axis_squared %f %f %f, ray_dir %f %f %f\n", 
                     point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
                     world_raypos.x, world_raypos.y, world_raypos.z,
                     ray_orig.x, ray_orig.y, ray_orig.z,
-                    dist_axis_squared.x, dist_axis_squared.y, dist_axis_squared.z);
+                    dist_axis_squared.x, dist_axis_squared.y, dist_axis_squared.z,
+                    ray_dir.x, ray_dir.y, ray_dir.z);
         }
     }
 
