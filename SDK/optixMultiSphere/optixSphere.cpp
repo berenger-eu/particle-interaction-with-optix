@@ -134,7 +134,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
             for(int idxSphere = 0; idxSphere < nbSpheres; idxSphere++)
             {
                 const float3 sphereVertex = make_float3( 1.0f * (drand48()), 
-                                                   1.0f * (drand48()), 
+                                                   0, // TODO 1.0f * (drand48()), 
                                                    1.0f * (drand48()) );
                 sphereVertices.push_back( sphereVertex );
             }
