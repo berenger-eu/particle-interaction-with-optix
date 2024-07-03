@@ -138,7 +138,7 @@ extern "C" __global__ void __raygen__rg()
             point,
             &payload_energy );
 
-    params.energy[point_index] += payload_energy;
+    // TODO params.energy[point_index] += payload_energy;
 }
 
 
