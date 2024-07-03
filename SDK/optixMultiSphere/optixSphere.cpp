@@ -190,7 +190,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                                           ) );
 
             timer.stop();
-            std::cout << "Time to build gas: " << timer.getElapsed() << " ms" << std::endl;
+            std::cout << "Time to build gas: " << timer.getElapsed() << " s" << std::endl;
 
             d_gas_output_buffer = d_buffer_temp_output_gas_and_compacted_size;
 
@@ -704,7 +704,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                 CUDA_SYNC_CHECK();
 
                 timer.stop();
-                std::cout << "Time to compute LJ: " << timer.getElapsed() << " ms" << std::endl;
+                std::cout << "Time to compute LJ: " << timer.getElapsed() << " s" << std::endl;
 
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_param ) ) );
             }
