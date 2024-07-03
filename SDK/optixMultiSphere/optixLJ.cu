@@ -45,15 +45,17 @@ static __forceinline__ __device__ void trace(
         float                  tmin,
         float                  tmax,
         float3                 partPos,
+        float                  c,
         float*                 energy
         )
 {
-    unsigned int p0, p1, p2, p3, p4;
+    unsigned int p0, p1, p2, p3, p4, p5;
     p0 = __float_as_uint( partPos.x );
     p1 = __float_as_uint( partPos.y );
     p2 = __float_as_uint( partPos.z );
     p3 = __float_as_uint( *energy );
     p4 = 0;
+    p5 = __float_as_uint( c );
 
     while(tmin < tmax){
         optixTrace(
@@ -68,13 +70,24 @@ static __forceinline__ __device__ void trace(
                 0,                   // SBT offset
                 0,                   // SBT stride
                 0,                   // missSBTIndex
-                p0, p1, p2, p3, p4);
+                p0, p1, p2, p3, p4, p5);
 
         tmin = __uint_as_float( p4 );
         printf("origin %f %f %f ; tmin: %f ; energy %f\n", ray_origin.x, ray_origin.y, ray_origin.z, tmin, __uint_as_float( p3 ));
     }
     
     (*energy) += __uint_as_float( p3 );
+}
+
+static __forceinline__ __device__ void setPayloadC( float c )
+{
+    optixSetPayload_5( __float_as_uint( c ) );
+}
+
+
+static __forceinline__ __device__ float getPayloadC()
+{
+    return __uint_as_float( optixGetPayload_5() );
 }
 
 static __forceinline__ __device__ void setPayloadTmin( float tmin )
@@ -92,7 +105,6 @@ static __forceinline__ __device__ float getPayloadEnergy()
 {
     return __uint_as_float( optixGetPayload_3() );
 }
-
 
 static __forceinline__ __device__ void setPayloadPartPos( float3 point )
 {
@@ -148,6 +160,7 @@ extern "C" __global__ void __raygen__rg()
             0.00f,  // tmin
             2 * c,  // tmax
             point,
+            c,
             &payload_energy );
 
     // params.energy[point_index] += payload_energy;
@@ -185,44 +198,51 @@ static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1,
 
 extern "C" __global__ void __closesthit__ch()
 {
-    const float3 point = getPayloadPartPos();
-    // const float3 ray_orig = optixGetWorldRayOrigin();
-    const float3 ray_dir  = optixGetWorldRayDirection();
-
     const unsigned int           prim_idx    = optixGetPrimitiveIndex();
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
     const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
-
     float4 q;
     // sphere center (q.x, q.y, q.z), sphere radius q.w
     optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, &q );
 
+    const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
+    const float3 dist_axis_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
+    const float dist_squared = dist_axis_squared.x + dist_axis_squared.y + dist_axis_squared.z;
+    const float c = getPayloadC();
 
-    const float closest_axis_dist = fminf(diff_pos.x, fminf(diff_pos.y, diff_pos.z));
-    const bool closest_axis_is_ray_dir = (closest_axis_dist == diff_pos.x && ray_dir.x != 0) ||
-                                         (closest_axis_dist == diff_pos.y && ray_dir.y != 0) ||
-                                         (closest_axis_dist == diff_pos.z && ray_dir.z != 0);
+    if(dist_squared < c*c){
+        // const float3 ray_orig = optixGetWorldRayOrigin();
+        const float3 ray_dir  = optixGetWorldRayDirection();
 
-    // // TODO print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
-    // TODO
-    {
-        const float3 ray_orig = optixGetWorldRayOrigin();
-        float  t_hit = optixGetRayTmax();
-        float3 world_raypos = ray_orig + t_hit * ray_dir;
-        printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f\n", 
-                point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
-                world_raypos.x, world_raypos.y, world_raypos.z);
+        const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
+        const bool closest_axis_is_ray_dir = (closest_axis_dist == dist_axis_squared.x && ray_dir.x != 0) ||
+                                            (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0) ||
+                                            (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0);
+
+        if(closest_axis_is_ray_dir){
+            const float epsilon = 1.0f;
+            const float sigma = 1.0f;
+            const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
+                                    //                   epsilon, sigma);
+
+            setPayloadEnergy( getPayloadEnergy() + energy );
+        }
+
+        // // TODO print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
+        // TODO
+        if(false){
+            const float3 ray_orig = optixGetWorldRayOrigin();
+            float  t_hit = optixGetRayTmax();
+            float3 world_raypos = ray_orig + t_hit * ray_dir;
+            printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f\n", 
+                    point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
+                    world_raypos.x, world_raypos.y, world_raypos.z);
+        }
     }
-    
-    if(closest_axis_is_ray_dir){
-        const float epsilon = 1.0f;
-        const float sigma = 1.0f;
-        const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
-                                //                   epsilon, sigma);
 
-        setPayloadEnergy( getPayloadEnergy() + energy );
-    }
+
+
     // Backface hit not used.
     // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
     // float3 world_raypos = ray_orig + t_hit * ray_dir;
