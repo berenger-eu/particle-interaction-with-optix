@@ -44,11 +44,15 @@ static __forceinline__ __device__ void trace(
         float3                 ray_direction,
         float                  tmin,
         float                  tmax,
+        float3                 partPos,
         float*                 energy
         )
 {
-    unsigned int p0;
-    p0 = __float_as_uint( *energy );
+    unsigned int p0, p1, p2, p3;
+    p0 = __float_as_uint( partPos.x );
+    p1 = __float_as_uint( partPos.y );
+    p2 = __float_as_uint( partPos.z );
+    p3 = __float_as_uint( *energy );
 
     optixTrace(
             handle,
@@ -62,20 +66,37 @@ static __forceinline__ __device__ void trace(
             0,                   // SBT offset
             0,                   // SBT stride
             0,                   // missSBTIndex
-            p0);
+            p0, p1, p2, p3);
 
     (*energy) = __uint_as_float( p0 );
 }
 
 static __forceinline__ __device__ void setPayloadEnergy( float p )
 {
-    optixSetPayload_0( __float_as_uint( p ) );
+    optixSetPayload_3( __float_as_uint( p ) );
 }
 
 
 static __forceinline__ __device__ float getPayloadEnergy()
 {
-    return __uint_as_float( optixGetPayload_0() );
+    return __uint_as_float( optixGetPayload_3() );
+}
+
+static __forceinline__ __device__ void setPayloadPartPos( float3 point )
+{
+    optixSetPayload_0( __float_as_uint( point.x ) );
+    optixSetPayload_1( __float_as_uint( point.y ) );
+    optixSetPayload_2( __float_as_uint( point.z ) );
+}
+
+
+static __forceinline__ __device__ float3 getPayloadPartPos()
+{
+    float3 point;
+    point.x = __uint_as_float( optixGetPayload_0() );
+    point.y = __uint_as_float( optixGetPayload_1() );
+    point.z = __uint_as_float( optixGetPayload_2() );
+    return point;
 }
 
 
@@ -114,6 +135,7 @@ extern "C" __global__ void __raygen__rg()
             direction,
             0.00f,  // tmin
             2 * c,  // tmax
+            point,
             &payload_energy );
 
     params.energy[point_index] += payload_energy;
@@ -149,8 +171,9 @@ static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1,
 
 extern "C" __global__ void __closesthit__ch()
 {
-    const float3 ray_orig = optixGetWorldRayOrigin();
-    const float3 ray_dir  = optixGetWorldRayDirection();
+    const float3 point = getPayloadPartPos();
+    // const float3 ray_orig = optixGetWorldRayOrigin();
+    // const float3 ray_dir  = optixGetWorldRayDirection();
 
     const unsigned int           prim_idx    = optixGetPrimitiveIndex();
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
@@ -170,7 +193,7 @@ extern "C" __global__ void __closesthit__ch()
 
     const float epsilon = 1.0f;
     const float sigma = 1.0f;
-    const float energy = lennardJonesPotential(ray_orig, make_float3(q.x, q.y, q.z), 
+    const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
                                                epsilon, sigma);
 
     setPayloadEnergy( energy );
