@@ -99,6 +99,7 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 int core(const int nbSpheres, const float sphereRadius, const std::string outfile,
           const int width, const int height){
     std::vector<float3> sphereVertices;
+    std::vector<float> sphereEnergy;
 
     try
     {
@@ -728,6 +729,9 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                 OPTIX_CHECK( optixDeviceContextDestroy( context ) );
 
                 // Added
+                sphereEnergy.resize(nbSpheres, 0);
+                CUDA_CHECK( cudaMemcpy( sphereEnergy.data(), reinterpret_cast<void*>( output_buffer ), 
+                                       nbSpheres * sizeof( float ), cudaMemcpyDeviceToHost ) );
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( output_buffer ) ) );
             }
         }
@@ -737,6 +741,27 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
         std::cerr << "Caught exception: " << e.what() << "\n";
         return 1;
     }
+
+    // We will compute the LJ interaction between the particles on the cpu
+    // to compare the results
+    // We will compute only for the first 100 particles
+    for(size_t idxTarget = 0 ; idxTarget < std::min(100UL, sphereVertices.size()) ; ++idxTarget){
+        float energy = 0.0f;
+        for(size_t idxSource = 0 ; idxSource < sphereVertices.size() ; ++idxSource){
+            if(idxSource != idxTarget){
+                const auto posSource = sphereVertices[idxSource];
+                const auto posTarget = sphereVertices[idxTarget];
+                const auto diff = posSource - posTarget;
+                const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+                if(dist < sphereRadius){
+                    energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
+                }
+            }
+        }
+        std::cout << "Energy for particle " << idxTarget << " is " << energy 
+                  << " it has been computed as " << sphereEnergy[idxTarget] << std::endl;
+    }
+
     return 0;
 }
 
