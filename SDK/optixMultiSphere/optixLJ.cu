@@ -48,27 +48,37 @@ static __forceinline__ __device__ void trace(
         float*                 energy
         )
 {
-    unsigned int p0, p1, p2, p3;
+    unsigned int p0, p1, p2, p3, p4;
     p0 = __float_as_uint( partPos.x );
     p1 = __float_as_uint( partPos.y );
     p2 = __float_as_uint( partPos.z );
     p3 = __float_as_uint( *energy );
+    p4 = 0;
 
-    optixTrace(
-            handle,
-            ray_origin,
-            ray_direction,
-            tmin,
-            tmax,
-            0.0f,                // rayTime
-            OptixVisibilityMask( 1 ),
-            OPTIX_RAY_FLAG_NONE,
-            0,                   // SBT offset
-            0,                   // SBT stride
-            0,                   // missSBTIndex
-            p0, p1, p2, p3);
+    while(tmin < tmax){
+        optixTrace(
+                handle,
+                ray_origin,
+                ray_direction,
+                tmin,
+                tmax,
+                0.0f,                // rayTime
+                OptixVisibilityMask( 1 ),
+                OPTIX_RAY_FLAG_NONE,
+                0,                   // SBT offset
+                0,                   // SBT stride
+                0,                   // missSBTIndex
+                p0, p1, p2, p3, p4);
 
-    (*energy) = __uint_as_float( p3 );
+        tmin = __uint_as_float( p4 );
+    }
+    
+    (*energy) += __uint_as_float( p3 );
+}
+
+static __forceinline__ __device__ void setPayloadTmin( float tmin )
+{
+    optixSetPayload_4( __float_as_uint( tmin ) );
 }
 
 static __forceinline__ __device__ void setPayloadEnergy( float p )
@@ -142,13 +152,12 @@ extern "C" __global__ void __raygen__rg()
     // params.energy[point_index] += payload_energy;
     // TODO
     atomicAdd(&params.energy[point_index], payload_energy);
-
 }
 
 
 extern "C" __global__ void __miss__ms()
 {
-    // setPayloadEnergy(0.0f);
+    setPayloadTmin( FLOAT_MAX );
 }
 
 
@@ -186,19 +195,19 @@ extern "C" __global__ void __closesthit__ch()
     float4 q;
     // sphere center (q.x, q.y, q.z), sphere radius q.w
     optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, &q );
-
-    // float  t_hit = optixGetRayTmax();
-    // Backface hit not used.
-    // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
-    // float3 world_raypos = ray_orig + t_hit * ray_dir;
-    // float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
-    // float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
-    // float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
-
     const float epsilon = 1.0f;
     const float sigma = 1.0f;
     const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
                             //                   epsilon, sigma);
 
     setPayloadEnergy( getPayloadEnergy() + energy );
+
+    const float  t_hit = optixGetRayTmax();
+    // Backface hit not used.
+    // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
+    // float3 world_raypos = ray_orig + t_hit * ray_dir;
+    // float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
+    // float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
+    // float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
+    setPayloadTmin( t_hit );
 }

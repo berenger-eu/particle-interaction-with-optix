@@ -487,7 +487,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
 
                 pipeline_compile_options.usesMotionBlur                   = false;
                 pipeline_compile_options.traversableGraphFlags            = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
-                pipeline_compile_options.numPayloadValues                 = 4;
+                pipeline_compile_options.numPayloadValues                 = 5;
                 pipeline_compile_options.numAttributeValues               = 1;
                 pipeline_compile_options.exceptionFlags                   = OPTIX_EXCEPTION_FLAG_NONE;
                 pipeline_compile_options.pipelineLaunchParamsVariableName = "params";
