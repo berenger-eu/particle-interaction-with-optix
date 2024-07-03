@@ -206,13 +206,15 @@ extern "C" __global__ void __closesthit__ch()
 
     // // TODO print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
     // TODO
-    const float3 ray_orig = optixGetWorldRayOrigin();
-    float  t_hit = optixGetRayTmax();
-    float3 world_raypos = ray_orig + t_hit * ray_dir;
-    printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f\n", 
-            point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
-            world_raypos.x, world_raypos.y, world_raypos.z);
-
+    {
+        const float3 ray_orig = optixGetWorldRayOrigin();
+        float  t_hit = optixGetRayTmax();
+        float3 world_raypos = ray_orig + t_hit * ray_dir;
+        printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f\n", 
+                point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
+                world_raypos.x, world_raypos.y, world_raypos.z);
+    }
+    
     if(closest_axis_is_ray_dir){
         const float epsilon = 1.0f;
         const float sigma = 1.0f;
