@@ -83,6 +83,7 @@ void printUsageAndExit( const char* argv0 )
     std::cerr << "Usage  : " << argv0 << " [options]\n";
     std::cerr << "Options: --file | -f <filename>      Specify file for image output\n";
     std::cerr << "         --nbspheres | -ns           Specify the number of particles/spheres\n";
+    std::cerr << "         --boxdivisor | -bd          Specify the divisor to compute the cutoff (cutoff = 1/x) \n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 512x384\n";
     exit( 1 );
@@ -95,56 +96,9 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     << message << "\n";
 }
 
-
-int main( int argc, char* argv[] )
-{
-    std::string outfile;
-    int         width  = 1024;
-    int         height =  768;
-    int         nbSpheres = 10;
-    const float  sphereRadius = 0.2;
+int core(const int nbSpheres, const float sphereRadius, const std::string outfile,
+          const int width, const int height){
     std::vector<float3> sphereVertices;
-
-    for( int i = 1; i < argc; ++i )
-    {
-        const std::string arg( argv[i] );
-        if( arg == "--help" || arg == "-h" )
-        {
-            printUsageAndExit( argv[0] );
-        }
-        else if( arg == "--file" || arg == "-f" )
-        {
-            if( i < argc - 1 )
-            {
-                outfile = argv[++i];
-            }
-            else
-            {
-                printUsageAndExit( argv[0] );
-            }
-        }
-        else if( arg == "--nbspheres" || arg == "-ns" )
-        {
-            if( i < argc - 1 )
-            {
-                nbSpheres = atoi(argv[++i]);
-            }
-            else
-            {
-                printUsageAndExit( argv[0] );
-            }
-        }
-        else if( arg.substr( 0, 6 ) == "--dim=" )
-        {
-            const std::string dims_arg = arg.substr( 6 );
-            sutil::parseDimensions( dims_arg.c_str(), width, height );
-        }
-        else
-        {
-            std::cerr << "Unknown option '" << arg << "'\n";
-            printUsageAndExit( argv[0] );
-        }
-    }
 
     try
     {
@@ -490,7 +444,7 @@ int main( int argc, char* argv[] )
                 buffer.height       = height;
                 buffer.pixel_format = sutil::BufferImageFormat::UNSIGNED_BYTE4;
                 if( outfile.empty() )
-                    sutil::displayBufferWindow( argv[0], buffer );
+                    sutil::displayBufferWindow( "Multi sphere", buffer );
                 else
                     sutil::saveImage( outfile.c_str(), buffer, false );
             }
@@ -784,4 +738,70 @@ int main( int argc, char* argv[] )
         return 1;
     }
     return 0;
+}
+
+
+int main( int argc, char* argv[] )
+{
+    std::string outfile;
+    int         nbSpheres = 10;
+    int         boxDivisor = 2;
+    int         width  = 1024;
+    int         height =  768;
+
+    for( int i = 1; i < argc; ++i )
+    {
+        const std::string arg( argv[i] );
+        if( arg == "--help" || arg == "-h" )
+        {
+            printUsageAndExit( argv[0] );
+        }
+        else if( arg == "--file" || arg == "-f" )
+        {
+            if( i < argc - 1 )
+            {
+                outfile = argv[++i];
+            }
+            else
+            {
+                printUsageAndExit( argv[0] );
+            }
+        }
+        else if( arg == "--nbspheres" || arg == "-ns" )
+        {
+            if( i < argc - 1 )
+            {
+                nbSpheres = atoi(argv[++i]);
+            }
+            else
+            {
+                printUsageAndExit( argv[0] );
+            }
+        }
+        else if( arg == "--boxdivisor" || arg == "-bd" )
+        {
+            if( i < argc - 1 )
+            {
+                boxDivisor = atoi(argv[++i]);
+            }
+            else
+            {
+                printUsageAndExit( argv[0] );
+            }
+        }
+        else if( arg.substr( 0, 6 ) == "--dim=" )
+        {
+            const std::string dims_arg = arg.substr( 6 );
+            sutil::parseDimensions( dims_arg.c_str(), width, height );
+        }
+        else
+        {
+            std::cerr << "Unknown option '" << arg << "'\n";
+            printUsageAndExit( argv[0] );
+        }
+    }
+
+    const float  sphereRadius = 1/double(boxDivisor);
+
+    return core(nbSpheres, sphereRadius, outfile, width, height);
 }
