@@ -68,7 +68,7 @@ static __forceinline__ __device__ void trace(
             0,                   // missSBTIndex
             p0, p1, p2, p3);
 
-    (*energy) = __uint_as_float( p0 );
+    (*energy) = __uint_as_float( p3 );
 }
 
 static __forceinline__ __device__ void setPayloadEnergy( float p )
@@ -81,6 +81,7 @@ static __forceinline__ __device__ float getPayloadEnergy()
 {
     return __uint_as_float( optixGetPayload_3() );
 }
+
 
 static __forceinline__ __device__ void setPayloadPartPos( float3 point )
 {
