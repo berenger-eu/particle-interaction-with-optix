@@ -138,7 +138,10 @@ extern "C" __global__ void __raygen__rg()
             point,
             &payload_energy );
 
-    // TODO params.energy[point_index] += payload_energy;
+    // params.energy[point_index] += payload_energy;
+    // TODO
+    params.energy[point_index] = payload_energy;
+
 }
 
 
@@ -193,7 +196,7 @@ extern "C" __global__ void __closesthit__ch()
 
     const float epsilon = 1.0f;
     const float sigma = 1.0f;
-    const float energy = 1; // lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
+    const float energy = prim_idx; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
                             //                   epsilon, sigma);
 
     setPayloadEnergy( energy );
