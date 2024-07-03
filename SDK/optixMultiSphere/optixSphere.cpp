@@ -653,7 +653,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
             CUdeviceptr output_buffer;
             {
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &output_buffer ), nbSpheres * sizeof( float ) ) );
-                CUDA_CHECK( cudaMemset( reinterpret_cast<void*>( output_buffer ), 0, nbSpheres * sizeof( float ) )
+                CUDA_CHECK( cudaMemset( reinterpret_cast<void*>( output_buffer ), 0, nbSpheres * sizeof( float ) ));
             }
 
             //
