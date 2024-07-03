@@ -48,6 +48,7 @@
 #include <sutil/Camera.h>
 #include <sutil/Trackball.h>
 
+#include "SpTimer.hpp"
 
 
 template <typename T>
@@ -222,6 +223,8 @@ int main( int argc, char* argv[] )
             emitProperty.type               = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
             emitProperty.result = ( CUdeviceptr )( (char*)d_buffer_temp_output_gas_and_compacted_size + compactedSizeOffset );
 
+            SpTimer timer;
+
             OPTIX_CHECK( optixAccelBuild( context,
                                           0,  // CUDA stream
                                           &accel_options, &sphere_input,
@@ -231,6 +234,9 @@ int main( int argc, char* argv[] )
                                           &emitProperty,  // emitted property list
                                           1               // num emitted properties
                                           ) );
+
+            timer.stop();
+            std::cout << "Time to build gas: " << timer.getElapsed() << " ms" << std::endl;
 
             d_gas_output_buffer = d_buffer_temp_output_gas_and_compacted_size;
 
@@ -736,10 +742,15 @@ int main( int argc, char* argv[] )
                             cudaMemcpyHostToDevice
                             ) );
 
+                SpTimer timer;
+
                 const int nbRays = 3;
                 OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( ParamsLJ ), 
                                           &sbt, nbSpheres, nbRays, /*depth=*/1 ) );
                 CUDA_SYNC_CHECK();
+
+                timer.stop();
+                std::cout << "Time to compute LJ: " << timer.getElapsed() << " ms" << std::endl;
 
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_param ) ) );
             }
