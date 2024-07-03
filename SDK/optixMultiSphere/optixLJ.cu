@@ -204,7 +204,9 @@ extern "C" __global__ void __closesthit__ch()
                                          (closest_axis_dist == diff_pos.y && ray_dir.y != 0) ||
                                          (closest_axis_dist == diff_pos.z && ray_dir.z != 0);
 
-    printf("closest_axis_dist: %f\n", closest_axis_dist);
+    // print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
+    printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d\n", 
+            point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir);
 
     if(closest_axis_is_ray_dir){
         const float epsilon = 1.0f;
