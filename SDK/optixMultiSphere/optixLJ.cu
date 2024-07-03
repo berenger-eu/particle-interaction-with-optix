@@ -187,7 +187,7 @@ extern "C" __global__ void __closesthit__ch()
 {
     const float3 point = getPayloadPartPos();
     // const float3 ray_orig = optixGetWorldRayOrigin();
-    // const float3 ray_dir  = optixGetWorldRayDirection();
+    const float3 ray_dir  = optixGetWorldRayDirection();
 
     const unsigned int           prim_idx    = optixGetPrimitiveIndex();
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
@@ -196,19 +196,28 @@ extern "C" __global__ void __closesthit__ch()
     float4 q;
     // sphere center (q.x, q.y, q.z), sphere radius q.w
     optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, &q );
-    const float epsilon = 1.0f;
-    const float sigma = 1.0f;
-    const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
-                            //                   epsilon, sigma);
 
-    setPayloadEnergy( getPayloadEnergy() + energy );
+    const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
 
-    const float  t_hit = optixGetRayTmax();
+    const float closest_axis_dist = fminf(diff_pos.x, fminf(diff_pos.y, diff_pos.z));
+    const bool closest_axis_is_ray_dir = (closest_axis_dist == diff_pos.x && ray_dir.x != 0) ||
+                                         (closest_axis_dist == diff_pos.y && ray_dir.y != 0) ||
+                                         (closest_axis_dist == diff_pos.z && ray_dir.z != 0);
+
+    if(closest_axis_is_ray_dir){
+        const float epsilon = 1.0f;
+        const float sigma = 1.0f;
+        const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
+                                //                   epsilon, sigma);
+
+        setPayloadEnergy( getPayloadEnergy() + energy );
+    }
     // Backface hit not used.
     // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
     // float3 world_raypos = ray_orig + t_hit * ray_dir;
     // float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
     // float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
     // float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
+    const float  t_hit = optixGetRayTmax();
     setPayloadTmin( t_hit );
 }
