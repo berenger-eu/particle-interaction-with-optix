@@ -200,5 +200,5 @@ extern "C" __global__ void __closesthit__ch()
     const float energy = 1; // TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
                             //                   epsilon, sigma);
 
-    setPayloadEnergy( energy );
+    setPayloadEnergy( getPayloadEnergy() + energy );
 }
