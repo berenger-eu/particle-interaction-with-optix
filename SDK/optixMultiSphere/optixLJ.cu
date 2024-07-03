@@ -157,7 +157,7 @@ extern "C" __global__ void __raygen__rg()
 
 extern "C" __global__ void __miss__ms()
 {
-    setPayloadTmin( FLT_MAX );
+    setPayloadTmin( 3.402823466e+38F );
 }
 
 
