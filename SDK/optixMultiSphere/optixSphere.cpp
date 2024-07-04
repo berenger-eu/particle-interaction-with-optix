@@ -759,7 +759,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                 }
             }
         }
-        if constexpr(false){
+        if(sphereVertices.size() < 10){
             std::cout << "Energy for particle " << idxTarget << " is " << energy 
                   << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;
         }
