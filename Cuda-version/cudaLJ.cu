@@ -673,7 +673,7 @@ int main(){
     for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
         const NumType cellWidth = BoxWidth/boxDiv;
         const int nbBoxes = boxDiv*boxDiv*boxDiv;
-        for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 10){
+        for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
             std::cout << "NbParticles: " << nbParticles << std::endl;
             std::cout << "BoxDiv: " << boxDiv << std::endl;
             std::cout << "CellWidth: " << cellWidth << std::endl;
