@@ -202,7 +202,8 @@ extern "C" __global__ void __closesthit__ch()
 
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
-    const float3 dist_axis_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
+    const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
+    const float3 dist_axis_squared{diff_pos_squared.y * diff_pos_squared.z, diff_pos_squared.x * diff_pos_squared.z, diff_pos_squared.x * diff_pos_squared.y};
     const float dist_squared = dist_axis_squared.x + dist_axis_squared.y + dist_axis_squared.z;
     const float c = getPayloadC();
 
