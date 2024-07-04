@@ -44,6 +44,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <fstream>
 
 #include <sutil/Camera.h>
 #include <sutil/Trackball.h>
@@ -78,17 +79,6 @@ void configureCamera( sutil::Camera& cam, const uint32_t width, const uint32_t h
 }
 
 
-void printUsageAndExit( const char* argv0 )
-{
-    std::cerr << "Usage  : " << argv0 << " [options]\n";
-    std::cerr << "Options: --file | -f <filename>      Specify file for image output\n";
-    std::cerr << "         --nbspheres | -ns           Specify the number of particles/spheres\n";
-    std::cerr << "         --boxdivisor | -bd          Specify the divisor to compute the cutoff (cutoff = 1/x) \n";
-    std::cerr << "         --help | -h                 Print this usage message\n";
-    std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 512x384\n";
-    exit( 1 );
-}
-
 
 static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */)
 {
@@ -96,13 +86,17 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     << message << "\n";
 }
 
-int core(const int nbSpheres, const float sphereRadius, const std::string outfile,
-          const int width, const int height){
-    std::vector<float3> sphereVertices;
-    std::vector<float> sphereEnergy;
+
+std::pair<double,double> core(const int nbSpheres, const float sphereRadius, const std::string outfile,
+          const int width, const int height, const bool checkResult){
+    double timebuild = 0;
+    double timecompute = 0;
 
     try
     {
+        std::vector<float3> sphereVertices;
+        std::vector<float> sphereEnergy;
+
         //
         // Initialize CUDA and create OptiX context
         //
@@ -192,6 +186,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
 
             timer.stop();
             std::cout << "Time to build gas: " << timer.getElapsed() << " s" << std::endl;
+            timebuild = timer.getElapsed();
 
             d_gas_output_buffer = d_buffer_temp_output_gas_and_compacted_size;
 
@@ -707,6 +702,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
 
                 timer.stop();
                 std::cout << "Time to compute LJ: " << timer.getElapsed() << " s" << std::endl;
+                timecompute = timer.getElapsed();
 
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_param ) ) );
             }
@@ -736,38 +732,84 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( output_buffer ) ) );
             }
         }
+
+        if(checkResult){
+            // We will compute the LJ interaction between the particles on the cpu
+            // to compare the results
+            // We will compute only for the first 100 particles
+            for(size_t idxTarget = 0 ; idxTarget < std::min(100UL, sphereVertices.size()) ; ++idxTarget){
+                float energy = 0.0f;
+                for(size_t idxSource = 0 ; idxSource < sphereVertices.size() ; ++idxSource){
+                    if(idxSource != idxTarget){
+                        const auto posSource = sphereVertices[idxSource];
+                        const auto posTarget = sphereVertices[idxTarget];
+                        const auto diff = posSource - posTarget;
+                        const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+                        if(dist < sphereRadius){
+                            energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
+                        }
+                    }
+                }
+                if(sphereVertices.size() < 10){
+                    std::cout << "Energy for particle " << idxTarget << " is " << energy 
+                        << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;
+                }
+            }
+        }
     }
     catch( std::exception& e )
     {
         std::cerr << "Caught exception: " << e.what() << "\n";
-        return 1;
     }
 
-    // We will compute the LJ interaction between the particles on the cpu
-    // to compare the results
-    // We will compute only for the first 100 particles
-    for(size_t idxTarget = 0 ; idxTarget < std::min(100UL, sphereVertices.size()) ; ++idxTarget){
-        float energy = 0.0f;
-        for(size_t idxSource = 0 ; idxSource < sphereVertices.size() ; ++idxSource){
-            if(idxSource != idxTarget){
-                const auto posSource = sphereVertices[idxSource];
-                const auto posTarget = sphereVertices[idxTarget];
-                const auto diff = posSource - posTarget;
-                const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
-                if(dist < sphereRadius){
-                    energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
-                }
-            }
-        }
-        if(sphereVertices.size() < 10){
-            std::cout << "Energy for particle " << idxTarget << " is " << energy 
-                  << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;
-        }
-    }
 
-    return 0;
+    return std::make_pair(timebuild, timecompute);
 }
 
+
+#include <chrono>
+#include <ctime>
+
+std::string getFilename(){
+    // Get the current date and time
+    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    // Format the date and time
+    std::tm* ptm = std::localtime(&now);
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
+
+    // Create the filename with the date and time
+    std::string filename = "results-" + std::string(buffer) + ".csv";
+    return filename;
+}
+
+struct ResultFrame{
+    struct AResult{
+        double timeInit;
+        double timeCompute;
+        double timeTotal;
+    };
+
+    int nbParticles;
+    long int nbInteractions;
+    int nbLoops;
+    int boxDiv;
+    std::vector<AResult> results;
+};
+
+
+void printUsageAndExit( const char* argv0 )
+{
+    std::cerr << "Usage  : " << argv0 << " [options]\n";
+    std::cerr << "Options: --file | -f <filename>      Specify file for image output\n";
+    std::cerr << "         --nbspheres | -ns           Specify the number of particles/spheres\n";
+    std::cerr << "         --boxdivisor | -bd          Specify the divisor to compute the cutoff (cutoff = 1/x) \n";
+    std::cerr << "         --runbench | -rb            Ask to run the benchmark (erase all the other arguments) \n";
+    std::cerr << "         --help | -h                 Print this usage message\n";
+    std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 512x384\n";
+    exit( 1 );
+}
 
 int main( int argc, char* argv[] )
 {
@@ -776,6 +818,7 @@ int main( int argc, char* argv[] )
     int         boxDivisor = 2;
     int         width  = 1024;
     int         height =  768;
+    bool        runBench = false;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -817,6 +860,10 @@ int main( int argc, char* argv[] )
                 printUsageAndExit( argv[0] );
             }
         }
+        else if( arg == "--runbench" || arg == "-rb" )
+        {
+            runBench = true;
+        }
         else if( arg.substr( 0, 6 ) == "--dim=" )
         {
             const std::string dims_arg = arg.substr( 6 );
@@ -829,7 +876,64 @@ int main( int argc, char* argv[] )
         }
     }
 
-    const float  sphereRadius = 1/double(boxDivisor);
+    if(runBench){
+        std::vector<ResultFrame> results;
 
-    return core(nbSpheres, sphereRadius, outfile, width, height);
+        const float BoxWidth = 1.0;
+        const int NbLoops = 5;// put 200
+        const int MaxParticlesPerCell = 128;
+        const int MaxBoxDiv = 32;// put 32
+        for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
+            const float cellWidth = BoxWidth/boxDiv;
+            const int nbBoxes = boxDiv*boxDiv*boxDiv;
+            for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
+                const float  sphereRadius = cellWidth;
+                const int nbSpheres = nbParticles;
+
+                std::cout << "NbParticles: " << nbParticles << std::endl;
+                std::cout << "BoxDiv: " << boxDiv << std::endl;
+                std::cout << "CellWidth: " << cellWidth << std::endl;
+                std::cout << "NbLoops: " << NbLoops << std::endl;
+                std::cout << "NbLoops: " << NbLoops << std::endl;
+
+                std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false);
+
+                ResultFrame frame;
+                frame.nbParticles = nbParticles;
+                frame.nbInteractions = nbParticles;
+                frame.nbLoops = NbLoops;
+                frame.boxDiv = boxDiv;
+                frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
+                results.push_back(frame);
+            }
+        }
+
+        std::ofstream file(getFilename());
+        {
+            file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
+            file << std::endl;
+        }
+        for(const ResultFrame& frame : results){
+            file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
+            file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
+            for(const ResultFrame::AResult& res : frame.results){
+                file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+            }
+            file << std::endl;
+        }
+    }
+    else{
+        const float  sphereRadius = 1/double(boxDivisor);
+
+        std::cout << "[LOG] nb spheres = " << nbSpheres << std::endl;
+        std::cout << "[LOG] sphere radius = " << sphereRadius << std::endl;
+        std::cout << "[LOG] box divisor = " << boxDivisor << std::endl;
+        std::cout << "[LOG] outfile = " << outfile << std::endl;
+        std::cout << "[LOG] width = " << width << std::endl;
+        std::cout << "[LOG] height = " << height << std::endl;
+
+        core(nbSpheres, sphereRadius, outfile, width, height, true);
+    }
+
+    return 0;
 }

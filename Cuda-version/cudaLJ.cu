@@ -667,7 +667,7 @@ int main(){
 
     using NumType = float;
     const NumType BoxWidth = 1.0;
-    const int NbLoops = 200;// put 200
+    const int NbLoops = 5;// put 200
     const int MaxParticlesPerCell = 128;
     const int MaxBoxDiv = 32;// put 32
     for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
