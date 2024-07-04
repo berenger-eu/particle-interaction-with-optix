@@ -73,7 +73,6 @@ static __forceinline__ __device__ void trace(
                 p0, p1, p2, p3, p4, p5);
 
         tmin = __uint_as_float( p4 );
-        // TODO printf("origin %f %f %f ; tmin: %f ; energy %f\n", ray_origin.x, ray_origin.y, ray_origin.z, tmin, __uint_as_float( p3 ));
     }
     
     (*energy) += __uint_as_float( p3 );
@@ -158,15 +157,14 @@ extern "C" __global__ void __raygen__rg()
             c,
             &payload_energy );
 
-    // params.energy[point_index] += payload_energy;
-    // TODO
     atomicAdd(&params.energy[point_index], payload_energy);
 }
 
 
 extern "C" __global__ void __miss__ms()
 {
-    setPayloadTmin( 3.402823466e+38F );
+    const float MAX_FLOAT = 3.402823466e+38F;
+    setPayloadTmin( MAX_FLOAT );
 }
 
 
@@ -223,20 +221,6 @@ extern "C" __global__ void __closesthit__ch()
                                                        epsilon, sigma);
 
             setPayloadEnergy( getPayloadEnergy() + energy );
-        }
-
-        // // TODO print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
-        // TODO
-        if(false){
-            const float3 ray_orig = optixGetWorldRayOrigin();
-            float  t_hit = optixGetRayTmax();
-            float3 world_raypos = ray_orig + t_hit * ray_dir;
-            printf("point %f %f %f ; q %f %f %f ; diff_pos %f %f %f ; closest_axis_dist %f ; closest_axis_is_ray_dir %d, inter pos %f %f %f, ray_orig %f %f %f, dist_axis_squared %f %f %f, ray_dir %f %f %f\n", 
-                    point.x, point.y, point.z, q.x, q.y, q.z, diff_pos.x, diff_pos.y, diff_pos.z, closest_axis_dist, closest_axis_is_ray_dir,
-                    world_raypos.x, world_raypos.y, world_raypos.z,
-                    ray_orig.x, ray_orig.y, ray_orig.z,
-                    dist_axis_squared.x, dist_axis_squared.y, dist_axis_squared.z,
-                    ray_dir.x, ray_dir.y, ray_dir.z);
         }
     }
 
