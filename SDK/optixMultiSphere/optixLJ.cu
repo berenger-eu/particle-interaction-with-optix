@@ -78,7 +78,6 @@ static __forceinline__ __device__ void trace(
     (*energy) += __uint_as_float( p3 );
 }
 
-
 static __forceinline__ __device__ float getPayloadC()
 {
     return __uint_as_float( optixGetPayload_5() );
@@ -94,19 +93,10 @@ static __forceinline__ __device__ void setPayloadEnergy( float p )
     optixSetPayload_3( __float_as_uint( p ) );
 }
 
-
 static __forceinline__ __device__ float getPayloadEnergy()
 {
     return __uint_as_float( optixGetPayload_3() );
 }
-
-static __forceinline__ __device__ void setPayloadPartPos( float3 point )
-{
-    optixSetPayload_0( __float_as_uint( point.x ) );
-    optixSetPayload_1( __float_as_uint( point.y ) );
-    optixSetPayload_2( __float_as_uint( point.z ) );
-}
-
 
 static __forceinline__ __device__ float3 getPayloadPartPos()
 {
@@ -168,19 +158,13 @@ extern "C" __global__ void __miss__ms()
 }
 
 
-static __forceinline__ __device__  float distance(const float3 p1,
-                                                  const float3 p2) {
-    // Particles are distributed randomly in the box, so we need a softening factor
-    const float softening = 1e-5;
-    return sqrt((p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y) + (p2.z - p1.z)*(p2.z - p1.z) + softening);
-}
-
 // Function to calculate the Lennard-Jones potential between two particles
 static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1, 
                                                                 const float3 p2, 
+                                                                const float dist_squared,
                                                                 const float epsilon, 
                                                                 const float sigma) {
-    const float r = distance(p1, p2);
+    const float r = sqrt(dist_squared);//distance(p1, p2);
     const float sigma_d_r = sigma / r;
     const float r6 = (sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r);
     const float r12 = r6 * r6;
@@ -217,7 +201,7 @@ extern "C" __global__ void __closesthit__ch()
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
-            const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), 
+            const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
                                                        epsilon, sigma);
 
             setPayloadEnergy( getPayloadEnergy() + energy );
