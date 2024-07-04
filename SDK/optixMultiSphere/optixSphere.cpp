@@ -765,7 +765,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
             }
         }
         std::cout << "Energy for particle " << idxTarget << " is " << energy 
-                  << " it has been computed as " << int(sphereEnergy[idxTarget]) << std::endl;// TODO int
+                  << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;// TODO int
     }
 
     return 0;
