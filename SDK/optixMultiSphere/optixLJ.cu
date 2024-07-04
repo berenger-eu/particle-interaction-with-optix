@@ -227,7 +227,7 @@ extern "C" __global__ void __closesthit__ch()
 
         // // TODO print point, q, diff_pos, closest_axis_dist, closest_axis_is_ray_dir in one printf
         // TODO
-        {
+        if(false){
             const float3 ray_orig = optixGetWorldRayOrigin();
             float  t_hit = optixGetRayTmax();
             float3 world_raypos = ray_orig + t_hit * ray_dir;
