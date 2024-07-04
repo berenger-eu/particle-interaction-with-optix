@@ -760,7 +760,7 @@ int core(const int nbSpheres, const float sphereRadius, const std::string outfil
                     std::cout << " - positions are " << posTarget.x << " " << posTarget.y << " " << posTarget.z << std::endl;
                 }
                 if(dist < sphereRadius){
-                    energy += 1;// TODO 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
+                    energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
                 }
             }
         }
