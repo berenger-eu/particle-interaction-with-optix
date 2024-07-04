@@ -73,7 +73,7 @@ static __forceinline__ __device__ void trace(
                 p0, p1, p2, p3, p4, p5);
 
         tmin = __uint_as_float( p4 );
-        printf("origin %f %f %f ; tmin: %f ; energy %f\n", ray_origin.x, ray_origin.y, ray_origin.z, tmin, __uint_as_float( p3 ));
+        // TODO printf("origin %f %f %f ; tmin: %f ; energy %f\n", ray_origin.x, ray_origin.y, ray_origin.z, tmin, __uint_as_float( p3 ));
     }
     
     (*energy) += __uint_as_float( p3 );
