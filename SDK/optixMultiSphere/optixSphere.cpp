@@ -185,7 +185,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                                           ) );
 
             timer.stop();
-            std::cout << "Time to build gas: " << timer.getElapsed() << " s" << std::endl;
+            std::cout << "[TIME] Time to build gas: " << timer.getElapsed() << " s" << std::endl;
             timebuild = timer.getElapsed();
 
             d_gas_output_buffer = d_buffer_temp_output_gas_and_compacted_size;
@@ -701,7 +701,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                 CUDA_SYNC_CHECK();
 
                 timer.stop();
-                std::cout << "Time to compute LJ: " << timer.getElapsed() << " s" << std::endl;
+                std::cout << "[TIME] Time to compute LJ: " << timer.getElapsed() << " s" << std::endl;
                 timecompute = timer.getElapsed();
 
                 CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_param ) ) );
