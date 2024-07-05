@@ -6,7 +6,7 @@
 #SBATCH --mail-type=all
 #SBATCH -C rtx8000
 
-cd /projets/schnaps/optix-8-sdk/build/
+cd /projets/schnaps/optix-8-sdk/buildrtx/
 source ../.modules
 make -j 4
 # ./bin/optixMultiSphere -f res.png -rb
