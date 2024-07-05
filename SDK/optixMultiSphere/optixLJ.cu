@@ -120,7 +120,7 @@ extern "C" __global__ void __raygen__rg()
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
-    const float half_ray = params.c * 0.71f; // round_up(cos(PI/4))
+    const float half_ray = params.c;
 
     // const int ray_index = idx.y;
     // const float3 ray_origins[3] = {
@@ -211,8 +211,8 @@ extern "C" __global__ void __closesthit__ch()
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
-            const float energy = 1;// TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
-                                   //                    epsilon, sigma);
+            const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
+                                                       epsilon, sigma);
 
             setPayloadEnergy( getPayloadEnergy() + energy );
         }

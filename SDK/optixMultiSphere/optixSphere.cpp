@@ -740,9 +740,6 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
             for(size_t idxTarget = 0 ; idxTarget < std::min(100UL, sphereVertices.size()) ; ++idxTarget){
                 float energy = 0.0f;
 
-                std::cout << "Computing energy for particle " << idxTarget << std::endl;
-                std::cout << " - TGT pos = " << sphereVertices[idxTarget].x << " " << sphereVertices[idxTarget].y << " " << sphereVertices[idxTarget].z << std::endl;
-
                 for(size_t idxSource = 0 ; idxSource < sphereVertices.size() ; ++idxSource){
                     if(idxSource != idxTarget){
                         const auto posSource = sphereVertices[idxSource];
@@ -751,7 +748,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                         const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
                         if(dist < sphereRadius){
                             std::cout << " - SRC pos = " << sphereVertices[idxSource].x << " " << sphereVertices[idxSource].y << " " << sphereVertices[idxSource].z << std::endl;
-                            energy += 1;// TODO 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
+                            energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
                         }
                     }
                 }
