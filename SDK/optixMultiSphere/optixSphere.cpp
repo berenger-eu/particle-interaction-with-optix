@@ -739,8 +739,13 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
             // We will compute only for the first 100 particles
             for(size_t idxTarget = 0 ; idxTarget < std::min(100UL, sphereVertices.size()) ; ++idxTarget){
                 float energy = 0.0f;
+
+                std::cout << "Computing energy for particle " << idxTarget << std::endl;
+                std::cout << " - TGT pos = " << sphereVertices[idxTarget].x << " " << sphereVertices[idxTarget].y << " " << sphereVertices[idxTarget].z << std::endl;
+
                 for(size_t idxSource = 0 ; idxSource < sphereVertices.size() ; ++idxSource){
                     if(idxSource != idxTarget){
+                        std::cout << " - SRC pos = " << sphereVertices[idxSource].x << " " << sphereVertices[idxSource].y << " " << sphereVertices[idxSource].z << std::endl;
                         const auto posSource = sphereVertices[idxSource];
                         const auto posTarget = sphereVertices[idxTarget];
                         const auto diff = posSource - posTarget;
