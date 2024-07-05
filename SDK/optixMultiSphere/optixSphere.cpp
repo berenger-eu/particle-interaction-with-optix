@@ -750,10 +750,8 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                         }
                     }
                 }
-                if(sphereVertices.size() < 10){
-                    std::cout << "Energy for particle " << idxTarget << " is " << energy 
-                        << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;
-                }
+                std::cout << "Energy for particle " << idxTarget << " is " << energy 
+                    << " it has been computed as " << (sphereEnergy[idxTarget]) << std::endl;
             }
         }
     }
