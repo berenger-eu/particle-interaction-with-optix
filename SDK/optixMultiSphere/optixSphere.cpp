@@ -746,7 +746,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                         const auto diff = posSource - posTarget;
                         const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
                         if(dist < sphereRadius){
-                            energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
+                            energy += 1;// TODO 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
                         }
                     }
                 }

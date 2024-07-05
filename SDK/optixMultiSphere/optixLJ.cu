@@ -211,8 +211,8 @@ extern "C" __global__ void __closesthit__ch()
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
-            const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
-                                                       epsilon, sigma);
+            const float energy = 1;// TODO lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
+                                   //                    epsilon, sigma);
 
             setPayloadEnergy( getPayloadEnergy() + energy );
         }
