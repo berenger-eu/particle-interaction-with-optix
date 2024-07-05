@@ -468,8 +468,6 @@ struct ResultFrame{
         double timeInit;
         double timeCompute;
         double timeTotal;
-        double gflops;
-        double interactionsPerSecond;
     };
 
     int nbParticles;
@@ -611,6 +609,11 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
                                                                 cells);
         CUDA_ASSERT( cudaDeviceSynchronize());
         computeTimer.stop();
+
+        results.push_back(ResultFrame::AResult{
+            initTimer.getElapsed(),
+            computeTimer.getElapsed(),
+            (initTimer.getElapsed() + computeTimer.getElapsed())});
     }
 
     CUDA_ASSERT(cudaStreamDestroy(stream));
@@ -626,13 +629,6 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     std::cout << " - Interactions/s: " << NbInteractions/(initTimer.getCumulated() + computeTimer.getCumulated()) << std::endl;
 
     deletePtrs(cuPtrToDelete);
-
-    results.push_back(ResultFrame::AResult{
-        initTimer.getCumulated(),
-        computeTimer.getCumulated(),
-        (initTimer.getCumulated() + computeTimer.getCumulated()), 
-        (NbInteractions*NbFlopsPerInteraction)/(initTimer.getCumulated() + computeTimer.getCumulated())/1e9, 
-        NbInteractions/(initTimer.getCumulated() + computeTimer.getCumulated())});
 
     return std::make_tuple(NbInteractions, std::move(results));
 }
@@ -700,12 +696,12 @@ int main(){
         file << std::endl;
     }
     for(const ResultFrame& frame : allResults){
-        file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
-        file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
         for(const ResultFrame::AResult& res : frame.results){
-            file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal << "," << res.gflops << "," << res.interactionsPerSecond;
+            file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
+            file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
+            file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+            file << std::endl;
         }
-        file << std::endl;
     }
 
 	return 0;
