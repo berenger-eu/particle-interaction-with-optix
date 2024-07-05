@@ -113,7 +113,6 @@ extern "C" __global__ void __raygen__rg()
     const uint3 idx = optixGetLaunchIndex();
     // const uint3 dim = optixGetLaunchDimensions();
     const int point_index = idx.x;
-    const int ray_index = idx.y;
 
     const RayGenDataLJ* rtData = (RayGenDataLJ*)optixGetSbtDataPointer();
     float3 point;
@@ -121,28 +120,39 @@ extern "C" __global__ void __raygen__rg()
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
+    const float half_ray = params.c * 0.71f; // round_up(cos(PI/4))
 
-    const float3 ray_origins[3] = {
-        make_float3(point.x - c, point.y, point.z),
-        make_float3(point.x, point.y - c, point.z),
-        make_float3(point.x, point.y, point.z - c)
-    };
+    // const int ray_index = idx.y;
+    // const float3 ray_origins[3] = {
+    //     make_float3(point.x - half_ray, point.y, point.z),
+    //     make_float3(point.x, point.y - half_ray, point.z),
+    //     make_float3(point.x, point.y, point.z - half_ray)
+    // };
+    // const float3 ray_directions[3] = {
+    //     make_float3(2 * half_ray, 0, 0),
+    //     make_float3(0, 2 * half_ray, 0),
+    //     make_float3(0, 0, 2 * half_ray)
+    // };
+    // const float3 origin = ray_origins[ray_index];
+    // const float3 direction = normalize(ray_directions[ray_index]);
 
-    const float3 ray_directions[3] = {
-        make_float3(2 * c, 0, 0),
-        make_float3(0, 2 * c, 0),
-        make_float3(0, 0, 2 * c)
-    };
+    float3 origin;
+    float3 direction;
+    {
+        float xcoef = (idx.y == 0) ? 1.0f : 0.0f;
+        float ycoef = (idx.y == 1) ? 1.0f : 0.0f;
+        float zcoef = (idx.y == 2) ? 1.0f : 0.0f;
 
-    const float3 origin = ray_origins[ray_index];
-    const float3 direction = normalize(ray_directions[ray_index]);
+        origin = make_float3(point.x - half_ray * xcoef, point.y - half_ray * ycoef, point.z - half_ray * zcoef);
+        direction = make_float3(xcoef, ycoef, zcoef);
+    }
 
     float payload_energy = 0;
     trace( params.handle,
             origin,
             direction,
             0.00f,  // tmin
-            2 * c,  // tmax
+            2 * half_ray,  // tmax
             point,
             c,
             &payload_energy );
