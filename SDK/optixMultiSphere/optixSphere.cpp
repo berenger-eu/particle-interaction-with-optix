@@ -900,7 +900,7 @@ int main( int argc, char* argv[] )
 
                 ResultFrame frame;
                 frame.nbParticles = nbParticles;
-                frame.nbInteractions = nbParticles;
+                frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
                 frame.nbLoops = NbLoops;
                 frame.boxDiv = boxDiv;
                 frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
@@ -914,12 +914,12 @@ int main( int argc, char* argv[] )
             file << std::endl;
         }
         for(const ResultFrame& frame : results){
-            file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
-            file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
             for(const ResultFrame::AResult& res : frame.results){
+                file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
+                file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
                 file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+                file << std::endl;
             }
-            file << std::endl;
         }
     }
     else{
