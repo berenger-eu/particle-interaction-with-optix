@@ -692,7 +692,7 @@ int main(){
     // Open the file
     std::ofstream file(getFilename());
     {
-        file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,interactionsperparticle,Par-Part-NoLoop-timeinit,Par-Part-NoLoop-timecompute,Par-Part-NoLoop-timetotal,Par-Part-NoLoop-gflops,Par-Part-NoLoop-interactionsPerSecond";
+        file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,interactionsperparticle,Par-Part-NoLoop-timeinit,Par-Part-NoLoop-timecompute,Par-Part-NoLoop-timetotal";
         file << std::endl;
     }
     for(const ResultFrame& frame : allResults){

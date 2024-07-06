@@ -916,7 +916,7 @@ int main( int argc, char* argv[] )
         for(const ResultFrame& frame : results){
             for(const ResultFrame::AResult& res : frame.results){
                 file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
-                file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv) << "," << double(frame.nbInteractions)/frame.nbParticles;
+                file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv);
                 file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
                 file << std::endl;
             }
