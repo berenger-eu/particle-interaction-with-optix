@@ -28,6 +28,7 @@
 
 OPTIX_add_sample_executable( optixMultiTriangle target_name
   optixTriangle.cu
+  optixLJ.cu
   optixTriangle.cpp
   optixTriangle.h
   OPTIONS -rdc true
