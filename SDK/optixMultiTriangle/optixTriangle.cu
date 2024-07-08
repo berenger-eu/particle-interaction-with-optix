@@ -142,5 +142,5 @@ extern "C" __global__ void __closesthit__ch()
     //const float2 barycentrics = optixGetTriangleBarycentrics();
     //setPayload( make_float3( barycentrics, 1.0f ) );
     const unsigned int prim_idx = optixGetPrimitiveIndex();
-    setPayload( generate_color(prim_idx) );
+    setPayload( generate_color(prim_idx/4) );
 }
