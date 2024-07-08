@@ -95,6 +95,8 @@ int main( int argc, char* argv[] )
     std::string outfile;
     int         width  = 1024;
     int         height =  768;
+    int         nbPoints = 1;
+    float       radius = 0.5f;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -124,6 +126,16 @@ int main( int argc, char* argv[] )
             std::cerr << "Unknown option '" << arg << "'\n";
             printUsageAndExit( argv[0] );
         }
+    }
+
+    // Create random points positions between O and 1
+    std::vector<float3> points;
+    for (int i = 0; i < nbPoints; i++)
+    {
+        float3 point = make_float3( 1.0f * (drand48()), 
+                                                   1.0f * (drand48()), 
+                                                   1.0f * (drand48()) );
+        points.push_back(point);
     }
 
     try
@@ -168,12 +180,35 @@ int main( int argc, char* argv[] )
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
             // Triangle build input: simple list of three vertices
-            const std::array<float3, 3> vertices =
-            { {
-                  { -0.5f, -0.5f, 0.0f },
-                  {  0.5f, -0.5f, 0.0f },
-                  {  0.0f,  0.5f, 0.0f }
-            } };
+            std::vector<float3> vertices;
+            // For each point we create four triangles
+            // that create a panel in front and behind.
+            // So each panel is composed of two triangles.
+            for(int i = 0; i < nbPoints; i++)
+            {
+                const float3 point = points[i];
+                std::array<float3, 8> corners;
+                for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
+                    corners[idxCorner].x = point.z + (idxCorner&1 ? radius : -radius );
+                    corners[idxCorner].y = point.y + (idxCorner&2 ? radius : -radius );
+                    corners[idxCorner].z = point.x + (idxCorner&4 ? radius : -radius );
+                }
+                vertices.push_back(corners[0]);
+                vertices.push_back(corners[1]);
+                vertices.push_back(corners[3]);
+
+                vertices.push_back(corners[0]);
+                vertices.push_back(corners[2]);
+                vertices.push_back(corners[3]);
+
+                vertices.push_back(corners[4]);
+                vertices.push_back(corners[5]);
+                vertices.push_back(corners[7]);
+
+                vertices.push_back(corners[4]);
+                vertices.push_back(corners[6]);
+                vertices.push_back(corners[7]);
+            }
 
             const size_t vertices_size = sizeof( float3 )*vertices.size();
             CUdeviceptr d_vertices=0;
