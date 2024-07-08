@@ -105,18 +105,33 @@ extern "C" __global__ void __miss__ms()
 
 
 __device__ float3 generate_color(unsigned int seed) {
-    // Initial HEX_VALUE
-    unsigned int hex_value = 0xABCDEF;
+    float r = 0.0f, g = 0.0f, b = 0.0f;
 
-    // XOR the hex_value with the seed and left shift by the seed
-    unsigned int v = (hex_value ^ seed) << seed;
+    for (unsigned int idx = 0; idx < 32; idx++) {
+        if (seed & (1 << idx)) {
+            if (idx % 3 == 0) {
+                r += 0.1f;
+            } else if (idx % 2 == 0) {
+                g += 0.1f;
+            } else {
+                b += 0.1f;
+            }
+        }
+    }
 
-    // Extract the RGB values and normalize to [0.0, 1.0]
-    float3 color;
-    color.x = (v % 256) / 255.0f;
-    color.y = ((v / 256) % 256) / 255.0f;
-    color.z = ((v / (256 * 256)) % 256) / 255.0f;
+    // Find the maximum of r, g, and b
+    float max_rgb = r;
+    if (g > max_rgb) max_rgb = g;
+    if (b > max_rgb) max_rgb = b;
 
+    // Normalize the RGB values
+    if (max_rgb > 0.0f) {
+        r /= max_rgb;
+        g /= max_rgb;
+        b /= max_rgb;
+    }
+
+    float3 color = {r, g, b};
     return color;
 }
 
