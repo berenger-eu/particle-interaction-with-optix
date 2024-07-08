@@ -104,11 +104,28 @@ extern "C" __global__ void __miss__ms()
 }
 
 
+__device__ float3 generate_color(unsigned int seed) {
+    // Initial HEX_VALUE
+    unsigned int hex_value = 0xABCDEF;
+
+    // XOR the hex_value with the seed and left shift by the seed
+    unsigned int v = (hex_value ^ seed) << seed;
+
+    // Extract the RGB values and normalize to [0.0, 1.0]
+    float3 color;
+    color.x = (v % 256) / 255.0f;
+    color.y = ((v / 256) % 256) / 255.0f;
+    color.z = ((v / (256 * 256)) % 256) / 255.0f;
+
+    return color;
+}
+
 extern "C" __global__ void __closesthit__ch()
 {
     // When built-in triangle intersection is used, a number of fundamental
     // attributes are provided by the OptiX API, indlucing barycentric coordinates.
-    const float2 barycentrics = optixGetTriangleBarycentrics();
-
-    setPayload( make_float3( barycentrics, 1.0f ) );
+    //const float2 barycentrics = optixGetTriangleBarycentrics();
+    //setPayload( make_float3( barycentrics, 1.0f ) );
+    const unsigned int prim_idx = optixGetPrimitiveIndex();
+    setPayload( generate_color(prim_idx) );
 }
