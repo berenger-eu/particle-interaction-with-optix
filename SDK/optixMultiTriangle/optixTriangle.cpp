@@ -63,12 +63,30 @@ typedef SbtRecord<MissData>       MissSbtRecord;
 typedef SbtRecord<HitGroupData>   HitGroupSbtRecord;
 
 
+// void configureCamera( sutil::Camera& cam, const uint32_t width, const uint32_t height )
+// {
+//     cam.setEye( {0.0f, 0.0f, 2.0f} );
+//     cam.setLookat( {0.0f, 0.0f, 0.0f} );
+//     cam.setUp( {0.0f, 1.0f, 3.0f} );
+//     cam.setFovY( 45.0f );
+//     cam.setAspectRatio( (float)width / (float)height );
+// }
+
 void configureCamera( sutil::Camera& cam, const uint32_t width, const uint32_t height )
 {
-    cam.setEye( {0.0f, 0.0f, 2.0f} );
+    // Set the eye position to be at a diagonal position
+    cam.setEye( {1.0f, 1.0f, 2.0f} );
+
+    // Set the lookat position to be at the center
     cam.setLookat( {0.0f, 0.0f, 0.0f} );
-    cam.setUp( {0.0f, 1.0f, 3.0f} );
+
+    // Set the up vector to keep the camera oriented correctly
+    cam.setUp( {0.0f, 1.0f, 0.0f} );
+
+    // Set the field of view
     cam.setFovY( 45.0f );
+
+    // Set the aspect ratio based on the provided width and height
     cam.setAspectRatio( (float)width / (float)height );
 }
 
