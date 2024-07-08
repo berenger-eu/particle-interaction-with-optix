@@ -148,14 +148,15 @@ extern "C" __global__ void __raygen__rg()
     }
 
     float payload_energy = 0;
-    trace( params.handle,
-            origin,
-            direction,
-            0.00f,  // tmin
-            2 * half_ray,  // tmax
-            point,
-            c,
-            &payload_energy );
+    // TODO
+    // trace( params.handle,
+    //         origin,
+    //         direction,
+    //         0.00f,  // tmin
+    //         2 * half_ray,  // tmax
+    //         point,
+    //         c,
+    //         &payload_energy );
 
     atomicAdd(&params.energy[point_index], payload_energy);
 }
