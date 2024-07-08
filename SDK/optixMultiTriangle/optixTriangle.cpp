@@ -113,8 +113,8 @@ int main( int argc, char* argv[] )
     std::string outfile;
     int         width  = 1024;
     int         height =  768;
-    int         nbPoints = 1;
-    float       radius = 0.5f;
+    int         nbPoints = 10;
+    float       radius = 0.2f;
 
     for( int i = 1; i < argc; ++i )
     {
