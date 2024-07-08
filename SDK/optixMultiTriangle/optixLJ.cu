@@ -33,99 +33,6 @@
 
 #include <sutil/vec_math.h>
 
-
-// OLD
-/*
-extern "C" {
-__constant__ Params params;
-}
-
-
-static __forceinline__ __device__ void setPayload( float3 p )
-{
-    optixSetPayload_0( __float_as_uint( p.x ) );
-    optixSetPayload_1( __float_as_uint( p.y ) );
-    optixSetPayload_2( __float_as_uint( p.z ) );
-}
-
-
-static __forceinline__ __device__ void computeRay( uint3 idx, uint3 dim, float3& origin, float3& direction )
-{
-    const float3 U = params.cam_u;
-    const float3 V = params.cam_v;
-    const float3 W = params.cam_w;
-    const float2 d = 2.0f * make_float2(
-            static_cast<float>( idx.x ) / static_cast<float>( dim.x ),
-            static_cast<float>( idx.y ) / static_cast<float>( dim.y )
-            ) - 1.0f;
-
-    origin    = params.cam_eye;
-    direction = normalize( d.x * U + d.y * V + W );
-}
-
-
-extern "C" __global__ void __raygen__rg()
-{
-    // Lookup our location within the launch grid
-    const uint3 idx = optixGetLaunchIndex();
-    const uint3 dim = optixGetLaunchDimensions();
-
-    // Map our launch idx to a screen location and create a ray from the camera
-    // location through the screen
-    float3 ray_origin, ray_direction;
-    computeRay( idx, dim, ray_origin, ray_direction );
-
-    // Trace the ray against our scene hierarchy
-    unsigned int p0, p1, p2;
-    optixTrace(
-            params.handle,
-            ray_origin,
-            ray_direction,
-            0.0f,                // Min intersection distance
-            1e16f,               // Max intersection distance
-            0.0f,                // rayTime -- used for motion blur
-            OptixVisibilityMask( 255 ), // Specify always visible
-            OPTIX_RAY_FLAG_NONE,
-            0,                   // SBT offset   -- See SBT discussion
-            1,                   // SBT stride   -- See SBT discussion
-            0,                   // missSBTIndex -- See SBT discussion
-            p0, p1, p2 );
-    float3 result;
-    result.x = __uint_as_float( p0 );
-    result.y = __uint_as_float( p1 );
-    result.z = __uint_as_float( p2 );
-
-    // Record results in our output raster
-    params.image[idx.y * params.image_width + idx.x] = make_color( result );
-}
-
-
-extern "C" __global__ void __miss__ms()
-{
-    MissData* miss_data  = reinterpret_cast<MissData*>( optixGetSbtDataPointer() );
-    setPayload(  miss_data->bg_color );
-}
-
-
-
-extern "C" __global__ void __closesthit__ch()
-{
-    // When built-in triangle intersection is used, a number of fundamental
-    // attributes are provided by the OptiX API, indlucing barycentric coordinates.
-    //const float2 barycentrics = optixGetTriangleBarycentrics();
-    //setPayload( make_float3( barycentrics, 1.0f ) );
-    const unsigned int prim_idx = optixGetPrimitiveIndex();
-    const float3 color = generate_color(prim_idx/4);
-    const float2 barycentrics = optixGetTriangleBarycentrics();
-
-    setPayload( make_float3( barycentrics.x * color.x,
-                             barycentrics.y * color.y,
-                             barycentrics.x * barycentrics.y * color.z) );
-}
-*/
-// NEW
-
-
 extern "C" {
 __constant__ ParamsLJ params;
 }
@@ -215,29 +122,29 @@ extern "C" __global__ void __raygen__rg()
     const float c = params.c;
     const float half_ray = params.c;
 
-    // const int ray_index = idx.y;
-    // const float3 ray_origins[3] = {
-    //     make_float3(point.x - half_ray, point.y, point.z),
-    //     make_float3(point.x, point.y - half_ray, point.z),
-    //     make_float3(point.x, point.y, point.z - half_ray)
-    // };
-    // const float3 ray_directions[3] = {
-    //     make_float3(2 * half_ray, 0, 0),
-    //     make_float3(0, 2 * half_ray, 0),
-    //     make_float3(0, 0, 2 * half_ray)
-    // };
-    // const float3 origin = ray_origins[ray_index];
-    // const float3 direction = normalize(ray_directions[ray_index]);
+    // Coordinates are:
+    //  1 --- 5
+    //  |\   |\
+    //  | \  | \
+    //  0 -3- 4  7
+    //   \ |  \ |   
+    //    \|   \|
+    //     2 --- 6
+    // First triangle is 0,1,3
+    // Second triangle is 0,2,3
+    // Third triangle is 4,5,7
+    // Fourth triangle is 4,6,7
 
     float3 origin;
     float3 direction;
     {
-        float xcoef = (idx.y == 0) ? 1.0f : 0.0f;
-        float ycoef = (idx.y == 1) ? 1.0f : 0.0f;
-        float zcoef = (idx.y == 2) ? 1.0f : 0.0f;
+        float ycoef = (idx.y & 1) ? -1.0f : 1.0f;
+        float zcoef = (idx.y & 2) ? -1.0f : 1.0f;
 
-        origin = make_float3(point.x - half_ray * xcoef, point.y - half_ray * ycoef, point.z - half_ray * zcoef);
-        direction = make_float3(xcoef, ycoef, zcoef);
+        origin = make_float3(point.x - half_ray,
+                             point.y - half_ray * ycoef,
+                             point.z - half_ray * zcoef);
+        direction = make_float3(c, 0, 0);
     }
 
     float payload_energy = 0;
@@ -286,14 +193,24 @@ extern "C" __global__ void __closesthit__ch()
     // sphere center (q.x, q.y, q.z), sphere radius q.w
     optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
-    float3 q; // TODO
+    float3 q;
+
+    q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) - min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
+    q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) - min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
+
+    const float c = getPayloadC();
+    if((prim_idx % 4) < 2){
+        q.x = vertices[0].x + c/2;
+    }
+    else{
+        q.x = vertices[0].x - c/2;
+    }
 
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
     const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
     const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
     const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
-    const float c = getPayloadC();
 
     if(dist_squared < c*c){
         // const float3 ray_orig = optixGetWorldRayOrigin();
@@ -313,8 +230,6 @@ extern "C" __global__ void __closesthit__ch()
             setPayloadEnergy( getPayloadEnergy() + energy );
         }
     }
-
-
 
     // Backface hit not used.
     // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
