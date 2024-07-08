@@ -522,7 +522,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 pipeline_compile_options.usesPrimitiveTypeFlags = OPTIX_PRIMITIVE_TYPE_FLAGS_TRIANGLE;
 
                 size_t      inputSize  = 0;
-                const char* input      = sutil::getInputData( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "optixTriangle.cu", inputSize );
+                const char* input      = sutil::getInputData( OPTIX_SAMPLE_NAME, OPTIX_SAMPLE_DIR, "optixLJ.cu", inputSize );
 
                 OPTIX_CHECK_LOG( optixModuleCreate(
                             context,
