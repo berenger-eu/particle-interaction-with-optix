@@ -207,9 +207,9 @@ int main( int argc, char* argv[] )
                 const float3 point = points[i];
                 std::array<float3, 8> corners;
                 for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
-                    corners[idxCorner].x = point.z + (idxCorner&1 ? radius : -radius );
+                    corners[idxCorner].z = point.z + (idxCorner&1 ? radius : -radius );
                     corners[idxCorner].y = point.y + (idxCorner&2 ? radius : -radius );
-                    corners[idxCorner].z = point.x + (idxCorner&4 ? radius : -radius );
+                    corners[idxCorner].x = point.x + (idxCorner&4 ? radius : -radius );
                 }
                 vertices.push_back(corners[0]);
                 vertices.push_back(corners[1]);

@@ -53,3 +53,31 @@ struct HitGroupData
 {
     // No data needed
 };
+
+// For optixLJ.cu
+
+struct ParamsLJ {
+    int num_points;
+    size_t leading_dim;
+    float* points;
+    float c;
+    float* energy;
+    OptixTraversableHandle handle;
+};
+
+struct RayGenDataLJ
+{
+    // No data needed
+};
+
+
+struct MissDataLJ
+{
+    // No data needed
+};
+
+
+struct HitGroupDataLJ
+{
+    // No data needed
+};
