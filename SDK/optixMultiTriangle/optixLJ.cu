@@ -157,7 +157,7 @@ extern "C" __global__ void __raygen__rg()
     //         c,
     //         &payload_energy );
     //
-    // atomicAdd(&params.energy[point_index], payload_energy);
+    atomicAdd(&params.energy[point_index], payload_energy);
 }
 
 
