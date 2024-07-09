@@ -200,8 +200,8 @@ extern "C" __global__ void __closesthit__ch()
 
     float3 q;
 
-    q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) - min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
-    q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) - min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
+    q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) + min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
+    q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) + min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
 
     const float c = getPayloadC();
     if((prim_idx % 4) < 2){
