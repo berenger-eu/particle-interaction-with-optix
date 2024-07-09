@@ -119,7 +119,6 @@ extern "C" __global__ void __raygen__rg()
     point.x = params.points[point_index];
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
-    return;// TODO: remove this line
     const float c = params.c;
     const float half_ray = params.c;
 
@@ -157,8 +156,8 @@ extern "C" __global__ void __raygen__rg()
     //         point,
     //         c,
     //         &payload_energy );
-
-    atomicAdd(&params.energy[point_index], payload_energy);
+    //
+    // atomicAdd(&params.energy[point_index], payload_energy);
 }
 
 
