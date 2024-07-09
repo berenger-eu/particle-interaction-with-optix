@@ -211,7 +211,7 @@ extern "C" __global__ void __closesthit__ch()
         q.x = vertices[0].x + c/2;
     }
 
-    printf("q: %f %f %f\n", q.x, q.y, q.z);
+    printf("prim_idx: %d, q: %f %f %f\n", prim_idx, q.x, q.y, q.z);
 
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
