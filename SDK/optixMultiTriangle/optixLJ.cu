@@ -189,7 +189,7 @@ extern "C" __global__ void __closesthit__ch()
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
     const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
 
-    float4 vertices[3];
+    float3 vertices[3];
     optixGetTriangleVertexData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
     float3 q;
