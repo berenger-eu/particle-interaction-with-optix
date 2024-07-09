@@ -142,10 +142,13 @@ extern "C" __global__ void __raygen__rg()
         float zcoef = (idx.y & 2) ? -1.0f : 1.0f;
 
         origin = make_float3(point.x - half_ray,
-                             point.y - half_ray * ycoef,
-                             point.z - half_ray * zcoef);
+                             point.y + half_ray * ycoef,
+                             point.z + half_ray * zcoef);
         direction = make_float3(c, 0, 0);
     }
+
+    // print point, origin and direction in one line
+    printf("point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
     float payload_energy = 0;
     trace( params.handle,
