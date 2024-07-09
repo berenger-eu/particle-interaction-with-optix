@@ -190,8 +190,7 @@ extern "C" __global__ void __closesthit__ch()
     const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
 
     float4 vertices[3];
-    // sphere center (q.x, q.y, q.z), sphere radius q.w
-    optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
+    optixGetTriangleVertexData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
     float3 q;
 
