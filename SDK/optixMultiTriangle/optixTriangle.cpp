@@ -156,7 +156,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
             // Use default options for simplicity.  In a real use case we would want to
             // enable compaction, etc
             OptixAccelBuildOptions accel_options = {};
-            accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION | OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS; // OPTIX_BUILD_FLAG_NONE;
+            accel_options.buildFlags = OPTIX_BUILD_FLAG_ALLOW_RANDOM_VERTEX_ACCESS; // OPTIX_BUILD_FLAG_NONE;
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
             // Triangle build input: simple list of three vertices

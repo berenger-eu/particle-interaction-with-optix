@@ -195,6 +195,9 @@ extern "C" __global__ void __closesthit__ch()
     float3 vertices[3];
     optixGetTriangleVertexData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
+    // print vertices in one line
+    printf("vertices: %f %f %f, %f %f %f, %f %f %f\n", vertices[0].x, vertices[0].y, vertices[0].z, vertices[1].x, vertices[1].y, vertices[1].z, vertices[2].x, vertices[2].y, vertices[2].z);
+
     float3 q;
 
     q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) - min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
