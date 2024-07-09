@@ -205,10 +205,10 @@ extern "C" __global__ void __closesthit__ch()
 
     const float c = getPayloadC();
     if((prim_idx % 4) < 2){
-        q.x = vertices[0].x - c/2;
+        q.x = vertices[0].x + c/2;
     }
     else{
-        q.x = vertices[0].x + c/2;
+        q.x = vertices[0].x - c/2;
     }
 
     printf("prim_idx: %d, q: %f %f %f\n", prim_idx, q.x, q.y, q.z);
