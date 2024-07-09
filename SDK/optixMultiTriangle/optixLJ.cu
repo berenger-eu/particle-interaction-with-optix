@@ -205,6 +205,8 @@ extern "C" __global__ void __closesthit__ch()
         q.x = vertices[0].x - c/2;
     }
 
+    printf("q: %f %f %f\n", q.x, q.y, q.z);
+
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
     const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
