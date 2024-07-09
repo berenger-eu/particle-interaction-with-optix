@@ -169,9 +169,9 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 const float3 point = points[i];
                 std::array<float3, 8> corners;
                 for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
-                    corners[idxCorner].z = point.z + (idxCorner&1 ? cutoffRadius : -cutoffRadius );
-                    corners[idxCorner].y = point.y + (idxCorner&2 ? cutoffRadius : -cutoffRadius );
-                    corners[idxCorner].x = point.x + (idxCorner&4 ? cutoffRadius : -cutoffRadius );
+                    corners[idxCorner].z = point.z + (idxCorner&1 ? cutoffRadius/2 : -cutoffRadius/2 );
+                    corners[idxCorner].y = point.y + (idxCorner&2 ? cutoffRadius/2 : -cutoffRadius/2 );
+                    corners[idxCorner].x = point.x + (idxCorner&4 ? cutoffRadius/2 : -cutoffRadius/2 );
                 }
                 vertices.push_back(corners[0]);
                 vertices.push_back(corners[1]);
