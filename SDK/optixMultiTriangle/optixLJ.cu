@@ -148,15 +148,15 @@ extern "C" __global__ void __raygen__rg()
     }
 
     float payload_energy = 0;
-    // trace( params.handle,
-    //         origin,
-    //         direction,
-    //         0.00f,  // tmin
-    //         2 * half_ray,  // tmax
-    //         point,
-    //         c,
-    //         &payload_energy );
-    //
+    trace( params.handle,
+            origin,
+            direction,
+            0.00f,  // tmin
+            2 * half_ray,  // tmax
+            point,
+            c,
+            &payload_energy );
+    
     atomicAdd(&params.energy[point_index], payload_energy);
 }
 
@@ -185,51 +185,51 @@ static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1,
 
 extern "C" __global__ void __closesthit__ch()
 {
-    const unsigned int           prim_idx    = optixGetPrimitiveIndex();
-    const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
-    const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
+    // const unsigned int           prim_idx    = optixGetPrimitiveIndex();
+    // const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
+    // const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
 
-    float4 vertices[3];
-    // sphere center (q.x, q.y, q.z), sphere radius q.w
-    optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
+    // float4 vertices[3];
+    // // sphere center (q.x, q.y, q.z), sphere radius q.w
+    // optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
-    float3 q;
+    // float3 q;
 
-    q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) - min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
-    q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) - min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
+    // q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) - min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
+    // q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) - min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
 
-    const float c = getPayloadC();
-    if((prim_idx % 4) < 2){
-        q.x = vertices[0].x + c/2;
-    }
-    else{
-        q.x = vertices[0].x - c/2;
-    }
+    // const float c = getPayloadC();
+    // if((prim_idx % 4) < 2){
+    //     q.x = vertices[0].x + c/2;
+    // }
+    // else{
+    //     q.x = vertices[0].x - c/2;
+    // }
 
-    const float3 point = getPayloadPartPos();
-    const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
-    const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
-    const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
-    const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
+    // const float3 point = getPayloadPartPos();
+    // const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
+    // const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
+    // const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
+    // const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
 
-    if(dist_squared < c*c){
-        // const float3 ray_orig = optixGetWorldRayOrigin();
-        const float3 ray_dir  = optixGetWorldRayDirection();
+    // if(dist_squared < c*c){
+    //     // const float3 ray_orig = optixGetWorldRayOrigin();
+    //     const float3 ray_dir  = optixGetWorldRayDirection();
 
-        const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
-        const bool closest_axis_is_ray_dir = (closest_axis_dist == dist_axis_squared.x && ray_dir.x != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0);
+    //     const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
+    //     const bool closest_axis_is_ray_dir = (closest_axis_dist == dist_axis_squared.x && ray_dir.x != 0) ||
+    //                                         (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0) ||
+    //                                         (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0);
 
-        if(closest_axis_is_ray_dir){
-            const float epsilon = 1.0f;
-            const float sigma = 1.0f;
-            const float energy = lennardJonesPotential(point, q, dist_squared,
-                                                       epsilon, sigma);
+    //     if(closest_axis_is_ray_dir){
+    //         const float epsilon = 1.0f;
+    //         const float sigma = 1.0f;
+    //         const float energy = lennardJonesPotential(point, q, dist_squared,
+    //                                                    epsilon, sigma);
 
-            setPayloadEnergy( getPayloadEnergy() + energy );
-        }
-    }
+    //         setPayloadEnergy( getPayloadEnergy() + energy );
+    //     }
+    // }
 
     // Backface hit not used.
     // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
