@@ -149,7 +149,7 @@ extern "C" __global__ void __raygen__rg()
     }
 
     // print point, origin and direction in one line
-    printf("point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
+    printf("idx.y %d, point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", idx.y, point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
     float payload_energy = 0;
     trace( params.handle,
@@ -175,10 +175,10 @@ extern "C" __global__ void __miss__ms()
 // Function to calculate the Lennard-Jones potential between two particles
 static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1, 
                                                                 const float3 p2, 
-                                                                const float dist_squared,
+                                                                const float dist_p1_p2,
                                                                 const float epsilon, 
                                                                 const float sigma) {
-    const float r = sqrt(dist_squared);//distance(p1, p2);
+    const float r = dist_p1_p2;//distance(p1, p2);
     const float sigma_d_r = sigma / r;
     const float r6 = (sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r)*(sigma_d_r*sigma_d_r);
     const float r12 = r6 * r6;
@@ -215,19 +215,18 @@ extern "C" __global__ void __closesthit__ch()
     printf("prim_idx: %d, q: %f %f %f\n", prim_idx, q.x, q.y, q.z);
 
     const float3 point = getPayloadPartPos();
-    const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
-    const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
-    const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
-    const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
 
-    if(dist_squared < c*c){
+    const float dist_p1_p2 = distance(point, q);
+
+    if(dist_p1_p2 < c){
         // const float3 ray_orig = optixGetWorldRayOrigin();
-        const float3 ray_dir  = optixGetWorldRayDirection();
+        // const float3 ray_dir  = optixGetWorldRayDirection();
 
         const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
-        const bool closest_axis_is_ray_dir = (closest_axis_dist == dist_axis_squared.x && ray_dir.x != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0);
+        const bool is_ray_for_compute = (point.y != q.y && point.z != q.z) ||
+                                        (point.z != q.z && idx_ray == ) ||
+                                        (point.y != q.y && idx_ray == ) ||
+                                        idx_ray == 3;// y and z are same
 
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
