@@ -119,8 +119,8 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
         //                                             1.0f * (drand48()) );
         //     points.push_back(point);
         // }
+        points.push_back(make_float3(0, 0.5, 0.1));
         points.push_back(make_float3(0, 0.5, 0));
-        points.push_back(make_float3(0, 0.6, 0));
 
         std::vector<float> pointsEnergy;
         //
