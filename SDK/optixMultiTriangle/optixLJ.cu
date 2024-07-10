@@ -179,6 +179,10 @@ extern "C" __global__ void __miss__ms()
 }
 
 
+static __forceinline__ __device__  float  distance(const float3& p1, const float3& p2) {
+    return sqrt((p2.x - p1.x)*(p2.x - p1.x) + (p2.y - p1.y)*(p2.y - p1.y) + (p2.z - p1.z)*(p2.z - p1.z));
+}
+
 // Function to calculate the Lennard-Jones potential between two particles
 static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1, 
                                                                 const float3 p2, 
