@@ -223,7 +223,7 @@ extern "C" __global__ void __closesthit__ch()
         q.x = vertices[0].x - c/2;
     }
 
-    printf("prim_idx: %d, q: %f %f %f\n", prim_idx, q.x, q.y, q.z);
+    printf("idx %d, prim_idx: %d, q: %f %f %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z);
 
     const float3 point = getPayloadPartPos();
 
