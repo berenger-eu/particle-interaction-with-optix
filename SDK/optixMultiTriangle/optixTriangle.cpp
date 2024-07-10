@@ -169,7 +169,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
             // So each panel is composed of two triangles.
             for(int i = 0; i < nbPoints; i++)
             {
-                const float epsilon = 1e-3;
+                const float epsilon = 1.001f;
                 const float3 point = points[i];
                 std::array<float3, 8> corners;
                 for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
