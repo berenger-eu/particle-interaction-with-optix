@@ -165,7 +165,8 @@ extern "C" __global__ void __raygen__rg()
             2 * half_ray,  // tmax
             point,
             c,
-            &payload_energy );
+            &payload_energy ,
+            idx.y);
     
     atomicAdd(&params.energy[point_index], payload_energy);
 }
@@ -237,7 +238,7 @@ extern "C" __global__ void __closesthit__ch()
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
-            const float energy = lennardJonesPotential(point, q, dist_squared,
+            const float energy = lennardJonesPotential(point, q, dist_p1_p2,
                                                        epsilon, sigma);
 
             setPayloadEnergy( getPayloadEnergy() + energy );
