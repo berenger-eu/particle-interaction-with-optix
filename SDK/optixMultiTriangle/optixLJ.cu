@@ -120,7 +120,7 @@ extern "C" __global__ void __raygen__rg()
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
-    const float half_c = params.c;
+    const float half_c = params.c/2;
     const float half_ray = params.c/2 + 1E-5f;
 
     // Coordinates are:
