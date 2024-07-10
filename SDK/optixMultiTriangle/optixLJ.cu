@@ -144,7 +144,7 @@ extern "C" __global__ void __raygen__rg()
         origin = make_float3(point.x - half_ray,
                              point.y + half_ray * ycoef,
                              point.z + half_ray * zcoef);
-        direction = make_float3(c, 0, 0);
+        direction = make_float3(half_ray*2, 0, 0);
     }
 
     // print point, origin and direction in one line
