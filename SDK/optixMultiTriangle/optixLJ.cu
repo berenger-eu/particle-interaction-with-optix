@@ -237,9 +237,9 @@ extern "C" __global__ void __closesthit__ch()
         const bool is_ray_for_compute = (point.y != q.y && point.z != q.z) ||
                                         (point.z != q.z && ray_idx == 0) ||
                                         (point.y != q.y && ray_idx == 2) ||
-                                        idx_ray == 3;// y and z are same
+                                        ray_idx == 3;// y and z are same
 
-        if(closest_axis_is_ray_dir){
+        if(is_ray_for_compute){
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
             const float energy = lennardJonesPotential(point, q, dist_p1_p2,
