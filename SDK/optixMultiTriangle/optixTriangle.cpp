@@ -111,13 +111,16 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
     {
         std::vector<float3> points;
         // Create random points positions between O and 1
-        for (int i = 0; i < nbPoints; i++)
-        {
-            float3 point = make_float3( 1.0f * (drand48()), 
-                                                    1.0f * (drand48()), 
-                                                    1.0f * (drand48()) );
-            points.push_back(point);
-        }
+        // TODO
+        // for (int i = 0; i < nbPoints; i++)
+        // {
+        //     float3 point = make_float3( 1.0f * (drand48()), 
+        //                                             1.0f * (drand48()), 
+        //                                             1.0f * (drand48()) );
+        //     points.push_back(point);
+        // }
+        points.push_back(make_float3(0, 0.5, 0));
+        points.push_back(make_float3(0, 0.6, 0));
 
         std::vector<float> pointsEnergy;
         //
