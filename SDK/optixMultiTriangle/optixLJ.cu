@@ -161,7 +161,7 @@ extern "C" __global__ void __raygen__rg()
     trace( params.handle,
             origin,
             direction,
-            0.000001f,  // tmin
+            0.0f,  // tmin
             2 * half_ray,  // tmax
             point,
             c,
