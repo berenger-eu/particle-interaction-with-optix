@@ -175,6 +175,8 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                     corners[idxCorner].z = point.z + (idxCorner&1 ? cutoffRadius/2 : -cutoffRadius/2 );
                     corners[idxCorner].y = point.y + (idxCorner&2 ? cutoffRadius/2 : -cutoffRadius/2 );
                     corners[idxCorner].x = point.x + (idxCorner&4 ? cutoffRadius/2 : -cutoffRadius/2 );
+                    // TODO
+                    std::cout << " - Corner " << idxCorner << " = " << corners[idxCorner].x << " " << corners[idxCorner].y << " " << corners[idxCorner].z << std::endl;
                 }
                 vertices.push_back(corners[0]);
                 vertices.push_back(corners[1]);
