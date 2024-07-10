@@ -120,6 +120,7 @@ extern "C" __global__ void __raygen__rg()
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
+    const float half_c = params.c;
     const float half_ray = params.c/2 + 1E-5f;
 
     // Coordinates are:
@@ -142,8 +143,8 @@ extern "C" __global__ void __raygen__rg()
         float zcoef = (idx.y & 2) ? -1.0f : 1.0f;
 
         origin = make_float3(point.x - half_ray,
-                             point.y + half_ray * ycoef,
-                             point.z + half_ray * zcoef);
+                             point.y + half_c * ycoef,
+                             point.z + half_c * zcoef);
         direction = make_float3(half_ray*2, 0, 0);
     }
 
