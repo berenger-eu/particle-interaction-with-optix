@@ -46,16 +46,18 @@ static __forceinline__ __device__ void trace(
         float                  tmax,
         float3                 partPos,
         float                  c,
-        float*                 energy
+        float*                 energy,
+        unsigned int           ray_idx
         )
 {
-    unsigned int p0, p1, p2, p3, p4, p5;
+    unsigned int p0, p1, p2, p3, p4, p5, p6;
     p0 = __float_as_uint( partPos.x );
     p1 = __float_as_uint( partPos.y );
     p2 = __float_as_uint( partPos.z );
     p3 = __float_as_uint( *energy );
     p4 = 0;
     p5 = __float_as_uint( c );
+    p6 = ray_idx;
 
     while(tmin < tmax){
         optixTrace(
@@ -70,12 +72,16 @@ static __forceinline__ __device__ void trace(
                 0,                   // SBT offset
                 0,                   // SBT stride
                 0,                   // missSBTIndex
-                p0, p1, p2, p3, p4, p5);
+                p0, p1, p2, p3, p4, p5, p6);
 
         tmin = __uint_as_float( p4 );
     }
     
     (*energy) += __uint_as_float( p3 );
+}
+static __forceinline__ __device__ unsigned int getPayloadRayidx()
+{
+    return optixGetPayload_6();
 }
 
 static __forceinline__ __device__ float getPayloadC()
@@ -222,10 +228,10 @@ extern "C" __global__ void __closesthit__ch()
         // const float3 ray_orig = optixGetWorldRayOrigin();
         // const float3 ray_dir  = optixGetWorldRayDirection();
 
-        const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
+        const unsigned int ray_idx = getPayloadRayidx();
         const bool is_ray_for_compute = (point.y != q.y && point.z != q.z) ||
-                                        (point.z != q.z && idx_ray == ) ||
-                                        (point.y != q.y && idx_ray == ) ||
+                                        (point.z != q.z && ray_idx == 0) ||
+                                        (point.y != q.y && ray_idx == 2) ||
                                         idx_ray == 3;// y and z are same
 
         if(closest_axis_is_ray_dir){
