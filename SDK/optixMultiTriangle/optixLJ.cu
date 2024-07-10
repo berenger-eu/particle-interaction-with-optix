@@ -240,8 +240,10 @@ extern "C" __global__ void __closesthit__ch()
                                         ray_idx == 3;// y and z are same
 
         if(is_ray_for_compute){
-            printf("ray_idx: %d, point: %f %f %f, q: %f %f %f, point == q %d %d %d\n", ray_idx, point.x, point.y, point.z, q.x, q.y, q.z,
-                    point.x == q.x, point.y == q.y, point.z == q.z);
+            float3 hit_position = optixGetWorldRayOrigin() + optixGetRayTmax() * optixGetWorldRayDirection();// TODO
+            printf("ray_idx: %d, point: %f %f %f, q: %f %f %f, point == q %d %d %d, origin %f %f %f, hit pos %f %f %f \n", ray_idx, point.x, point.y, point.z, q.x, q.y, q.z,
+                    point.x == q.x, point.y == q.y, point.z == q.z, optixGetWorldRayOrigin().x, optixGetWorldRayOrigin().y, optixGetWorldRayOrigin().z,
+                    hit_position.x, hit_position.y, hit_position.z);
 
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
