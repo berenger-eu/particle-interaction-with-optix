@@ -171,7 +171,7 @@ static __forceinline__ __device__  float  lennardJonesPotential(const float3 p1,
 }
 
 
-extern "C" __global__ void __closesthit__ch()
+extern "C" __global__ void __anyhit__ch()
 {
     const unsigned int           prim_idx    = optixGetPrimitiveIndex();
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();

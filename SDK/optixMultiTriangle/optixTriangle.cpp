@@ -588,8 +588,10 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
 
                 OptixProgramGroupDesc hitgroup_prog_group_desc = {};
                 hitgroup_prog_group_desc.kind                         = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-                hitgroup_prog_group_desc.hitgroup.moduleCH            = module;
-                hitgroup_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__ch";
+                hitgroup_prog_group_desc.hitgroup.moduleAH            = module;
+                hitgroup_prog_group_desc.hitgroup.entryFunctionNameAH = "__anyhit__ch";
+                hitgroup_prog_group_desc.hitgroup.moduleCH            = nullptr;
+                hitgroup_prog_group_desc.hitgroup.entryFunctionNameCH = nullptr;
                 OPTIX_CHECK_LOG( optixProgramGroupCreate(
                             context,
                             &hitgroup_prog_group_desc,
