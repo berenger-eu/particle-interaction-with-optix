@@ -50,48 +50,38 @@ static __forceinline__ __device__ void trace(
         unsigned int           ray_idx
         )
 {
-    unsigned int p0, p1, p2, p3, p4, p5, p6;
+    unsigned int p0, p1, p2, p3, p4, p5;
     p0 = __float_as_uint( partPos.x );
     p1 = __float_as_uint( partPos.y );
     p2 = __float_as_uint( partPos.z );
     p3 = __float_as_uint( *energy );
-    p4 = 0;
-    p5 = __float_as_uint( c );
-    p6 = ray_idx;
+    p4 = __float_as_uint( c );
+    p5 = ray_idx;
 
-    while(tmin < tmax){
-        optixTrace(
-                handle,
-                ray_origin,
-                ray_direction,
-                tmin,
-                tmax,
-                0.0f,                // rayTime
-                OptixVisibilityMask( 1 ),
-                OPTIX_RAY_FLAG_NONE,
-                0,                   // SBT offset
-                0,                   // SBT stride
-                0,                   // missSBTIndex
-                p0, p1, p2, p3, p4, p5, p6);
-
-        tmin = __uint_as_float( p4 );
-    }
+    optixTrace(
+            handle,
+            ray_origin,
+            ray_direction,
+            tmin,
+            tmax,
+            0.0f,                // rayTime
+            OptixVisibilityMask( 1 ),
+            OPTIX_RAY_FLAG_NONE,
+            0,                   // SBT offset
+            0,                   // SBT stride
+            0,                   // missSBTIndex
+            p0, p1, p2, p3, p4, p5);
     
     (*energy) += __uint_as_float( p3 );
 }
 static __forceinline__ __device__ unsigned int getPayloadRayidx()
 {
-    return optixGetPayload_6();
+    return optixGetPayload_5();
 }
 
 static __forceinline__ __device__ float getPayloadC()
 {
-    return __uint_as_float( optixGetPayload_5() );
-}
-
-static __forceinline__ __device__ void setPayloadTmin( float tmin )
-{
-    optixSetPayload_4( __float_as_uint( tmin ) );
+    return __uint_as_float( optixGetPayload_4() );
 }
 
 static __forceinline__ __device__ void setPayloadEnergy( float p )
@@ -112,7 +102,6 @@ static __forceinline__ __device__ float3 getPayloadPartPos()
     point.z = __uint_as_float( optixGetPayload_2() );
     return point;
 }
-
 
 extern "C" __global__ void __raygen__rg()
 {
@@ -177,8 +166,6 @@ extern "C" __global__ void __raygen__rg()
 
 extern "C" __global__ void __miss__ms()
 {
-    const float MAX_FLOAT = 3.402823466e+38F;
-    setPayloadTmin( MAX_FLOAT );
 }
 
 
@@ -262,6 +249,6 @@ extern "C" __global__ void __closesthit__ch()
     // float3 obj_raypos   = optixTransformPointFromWorldToObjectSpace( world_raypos );
     // float3 obj_normal   = ( obj_raypos - make_float3( q ) ) / q.w;
     // float3 world_normal = normalize( optixTransformNormalFromObjectToWorldSpace( obj_normal ) );
-    const float  t_hit = optixGetRayTmax();
-    setPayloadTmin( t_hit );
+    // optixTerminateRay();
+    optixIgnoreIntersection();
 }
