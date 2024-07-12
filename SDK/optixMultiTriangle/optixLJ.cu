@@ -32,6 +32,7 @@
 #include <cuda/helpers.h>
 
 #include <sutil/vec_math.h>
+#include <limits>
 
 extern "C" {
 __constant__ ParamsLJ params;
