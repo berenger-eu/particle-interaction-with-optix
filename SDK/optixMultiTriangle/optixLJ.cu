@@ -158,11 +158,13 @@ extern "C" __global__ void __raygen__rg()
     printf("idx.y %d, point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", idx.y, point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
     float payload_energy = 0;
+    const float tmin = std::numeric_limits<float>::epsilon();
+    const float tmax = (2 * half_ray) + (2 * half_ray) * std::numeric_limits<float>::epsilon();
     trace( params.handle,
             origin,
             direction,
-            0.00001f,  // tmin
-            2 * half_ray + 0.00001f,  // tmax
+            tmin,
+            tmax,
             point,
             c,
             &payload_energy ,
