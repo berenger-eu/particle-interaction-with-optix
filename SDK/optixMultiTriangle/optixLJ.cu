@@ -32,7 +32,6 @@
 #include <cuda/helpers.h>
 
 #include <sutil/vec_math.h>
-#include <limits>
 
 extern "C" {
 __constant__ ParamsLJ params;
@@ -159,8 +158,9 @@ extern "C" __global__ void __raygen__rg()
     printf("idx.y %d, point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", idx.y, point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
     float payload_energy = 0;
-    const float tmin = std::numeric_limits<float>::epsilon();
-    const float tmax = (2 * half_ray) + (2 * half_ray) * std::numeric_limits<float>::epsilon();
+    const float feps = 1.19209290e-07F;
+    const float tmin = feps;
+    const float tmax = (2 * half_ray) + (2 * half_ray) * feps;
     trace( params.handle,
             origin,
             direction,
