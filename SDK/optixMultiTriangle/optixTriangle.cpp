@@ -165,14 +165,14 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
             // Triangle build input: simple list of three vertices
             std::vector<float3> vertices;
             auto add_smallest_increment = [](float x) -> float {
-                float epsilon = 0.0001;//std::numeric_limits<float>::epsilon();
+                float epsilon = 0.00001;//std::numeric_limits<float>::epsilon();
                 float smallest_increment = x * epsilon;
                 return x + smallest_increment;
             };
 
             // Function to subtract the smallest increment from a float
             auto subtract_smallest_increment = [](float x) -> float {
-                float epsilon = 0.0001;//std::numeric_limits<float>::epsilon();
+                float epsilon = 0.00001;//std::numeric_limits<float>::epsilon();
                 float smallest_increment = x * epsilon;
                 return x - smallest_increment;
             };
@@ -182,7 +182,6 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
             // So each panel is composed of two triangles.
             for(int i = 0; i < nbPoints; i++)
             {
-                const float epsilon = 1.001f;
                 const float3 point = points[i];
                 std::array<float3, 8> corners;
                 for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
