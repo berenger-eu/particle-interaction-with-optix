@@ -168,14 +168,14 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 float epsilon = std::numeric_limits<float>::epsilon();
                 float smallest_increment = x * epsilon;
                 return x + smallest_increment;
-            }
+            };
 
             // Function to subtract the smallest increment from a float
             auto subtract_smallest_increment = [](float x) -> float {
                 float epsilon = std::numeric_limits<float>::epsilon();
                 float smallest_increment = x * epsilon;
                 return x - smallest_increment;
-            }
+            };
 
             // For each point we create four triangles
             // that create a panel in front and behind.
