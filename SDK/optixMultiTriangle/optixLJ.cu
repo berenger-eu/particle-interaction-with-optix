@@ -232,7 +232,7 @@ extern "C" __global__ void __closesthit__ch()
 
     const float dist_p1_p2 = distance(point, q);
 
-    if(dist_p1_p2 < c && dist_p1_p2 != 0.0f){
+    if(dist_p1_p2 < c && dist_p1_p2 > 0.0f){
         // const float3 ray_orig = optixGetWorldRayOrigin();
         // const float3 ray_dir  = optixGetWorldRayDirection();
 
