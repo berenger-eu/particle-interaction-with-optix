@@ -226,11 +226,10 @@ extern "C" __global__ void __closesthit__ch()
         q.x = vertices[0].x - c/2;
     }
 
-    printf("idx %d, prim_idx: %d, q: %f %f %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z);
-
     const float3 point = getPayloadPartPos();
 
     const float dist_p1_p2 = distance(point, q);
+    printf("idx %d, prim_idx: %d, q: %f %f %f, dist_p1_p2: %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z, dist_p1_p2);
 
     if(dist_p1_p2 < c && dist_p1_p2 > 1.19209290e-07F){
         // const float3 ray_orig = optixGetWorldRayOrigin();
