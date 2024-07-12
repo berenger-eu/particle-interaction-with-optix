@@ -216,7 +216,7 @@ extern "C" __global__ void __anyhit__ch()
     const float3 point = getPayloadPartPos();
 
     const float dist_p1_p2 = distance(point, q);
-    printf("idx %d, prim_idx: %d, q: %f %f %f, point: %f %f % f, dist_p1_p2: %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z, point.x, point.y, point.z, dist_p1_p2);
+    printf("]] ray_idx %d, prim_idx: %d, q: %f %f %f, point: %f %f % f, dist_p1_p2: %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z, point.x, point.y, point.z, dist_p1_p2);
 
     if(dist_p1_p2 < c && dist_p1_p2 > 0.0001){
         // const float3 ray_orig = optixGetWorldRayOrigin();
