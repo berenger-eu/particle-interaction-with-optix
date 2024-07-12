@@ -225,8 +225,8 @@ extern "C" __global__ void __anyhit__ch()
         const unsigned int ray_idx = getPayloadRayidx();
         const bool is_ray_for_compute = (point.y != q.y && point.z != q.z) ||
                                         (point.z != q.z && ((point.y < q.y && ray_idx == 0) || (point.y > q.y && ray_idx == 1))) ||
-                                        (point.y != q.y && ((point.z < q.z && ray_idx == 1) || (point.z > q.z && ray_idx == 0))) ||
-                                        ray_idx == 3;// y and z are same
+                                        (point.y != q.y && ((point.z < q.z && ray_idx == 0) || (point.z > q.z && ray_idx == 2))) ||
+                                        ray_idx == 0;// y and z are same
 
         if(is_ray_for_compute){
             float3 hit_position = optixGetWorldRayOrigin() + optixGetRayTmax() * optixGetWorldRayDirection();// TODO
