@@ -120,7 +120,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
         //     points.push_back(point);
         // }
         points.push_back(make_float3(0, 0.5, 0));
-        points.push_back(make_float3(0, 0.6, 0));
+        points.push_back(make_float3(0, 0.5, 0.1));
 
         std::vector<float> pointsEnergy;
         //
@@ -165,13 +165,13 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
             // Triangle build input: simple list of three vertices
             std::vector<float3> vertices;
             auto add_smallest_increment = [](float x) -> float {
-                float epsilon = 0;//0.00001;//std::numeric_limits<float>::epsilon();
+                float epsilon = 0.00001;//std::numeric_limits<float>::epsilon();
                 return x + epsilon;
             };
 
             // Function to subtract the smallest increment from a float
             auto subtract_smallest_increment = [](float x) -> float {
-                float epsilon = 0;//0.00001;//std::numeric_limits<float>::epsilon();
+                float epsilon = 0.00001;//std::numeric_limits<float>::epsilon();
                 return x - epsilon;
             };
 
