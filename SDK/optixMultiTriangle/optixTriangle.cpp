@@ -172,7 +172,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
 
             // Function to subtract the smallest increment from a float
             auto subtract_smallest_increment = [](float x) -> float {
-                float epsilon = 0.0001;// std::numeric_limits<float>::epsilon();
+                float epsilon = 0.0001;//std::numeric_limits<float>::epsilon();
                 float smallest_increment = x * epsilon;
                 return x - smallest_increment;
             };
@@ -186,8 +186,8 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 const float3 point = points[i];
                 std::array<float3, 8> corners;
                 for(int idxCorner = 0 ; idxCorner < 8 ; ++idxCorner){
-                    corners[idxCorner].z = (idxCorner&1 ? add_smallest_increment(point.z+cutoffRadius/2) : subtract_smallest_increment(point.z-cutoffRadius/2) );
-                    corners[idxCorner].y = (idxCorner&2 ? add_smallest_increment(point.y+cutoffRadius/2) : subtract_smallest_increment(point.y-cutoffRadius/2) );
+                    corners[idxCorner].z = point.z + (idxCorner&1 ? add_smallest_increment(cutoffRadius/2) : subtract_smallest_increment(cutoffRadius/2) );
+                    corners[idxCorner].y = point.y + (idxCorner&2 ? add_smallest_increment(cutoffRadius/2) : subtract_smallest_increment(cutoffRadius/2) );
                     corners[idxCorner].x = point.x + (idxCorner&4 ? cutoffRadius/2 : -cutoffRadius/2 );
                     // TODO
                     std::cout << " - Corner " << idxCorner << " = " << corners[idxCorner].x << " " << corners[idxCorner].y << " " << corners[idxCorner].z << std::endl;
