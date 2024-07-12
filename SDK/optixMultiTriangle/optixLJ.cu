@@ -160,7 +160,7 @@ extern "C" __global__ void __raygen__rg()
     float payload_energy = 0;
     const float feps = 1.19209290e-07F;
     const float tmin = feps;
-    const float tmax = (2 * half_ray) + (2 * half_ray) * feps;
+    const float tmax = (2 * half_ray) + (2 * half_ray) * 0.0001;
     trace( params.handle,
             origin,
             direction,
