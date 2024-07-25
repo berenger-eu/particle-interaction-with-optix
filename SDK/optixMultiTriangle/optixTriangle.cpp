@@ -118,9 +118,6 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                                                     1.0f * (drand48()) );
             points.push_back(point);
         }
-        // TODO
-        // points.push_back(make_float3(0, 0.5, 0));
-        // points.push_back(make_float3(0, 0.5, 0.1));
 
         std::vector<float> pointsEnergy;
         //
@@ -186,8 +183,6 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                     corners[idxCorner].z = point.z + (idxCorner&1 ? add_smallest_increment(cutoffRadius/2) : subtract_smallest_increment(-cutoffRadius/2) );
                     corners[idxCorner].y = point.y + (idxCorner&2 ? add_smallest_increment(cutoffRadius/2) : subtract_smallest_increment(-cutoffRadius/2) );
                     corners[idxCorner].x = point.x + (idxCorner&4 ? cutoffRadius/2 : -cutoffRadius/2 );
-                    // TODO
-                    std::cout << " - Corner " << idxCorner << " = " << corners[idxCorner].x << " " << corners[idxCorner].y << " " << corners[idxCorner].z << std::endl;
                 }
                 vertices.push_back(corners[0]);
                 vertices.push_back(corners[1]);
@@ -824,7 +819,7 @@ std::string getFilename(){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-" + std::string(buffer) + ".csv";
+    std::string filename = "results-triangle-" + std::string(buffer) + ".csv";
     return filename;
 }
 

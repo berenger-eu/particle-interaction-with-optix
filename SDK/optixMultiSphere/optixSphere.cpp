@@ -780,7 +780,7 @@ std::string getFilename(){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-" + std::string(buffer) + ".csv";
+    std::string filename = "results-sphere-" + std::string(buffer) + ".csv";
     return filename;
 }
 

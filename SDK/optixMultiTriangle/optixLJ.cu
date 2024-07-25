@@ -143,9 +143,6 @@ extern "C" __global__ void __raygen__rg()
         direction = make_float3(1, 0, 0);
     }
 
-    // print point, origin and direction in one line
-    printf("idx.y %d, point: %f %f %f, origin: %f %f %f, direction: %f %f %f\n", idx.y, point.x, point.y, point.z, origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
-
     float payload_energy = 0;
     const float feps = 1.19209290e-07F;
     const float tmin = feps;
@@ -197,11 +194,7 @@ extern "C" __global__ void __anyhit__ch()
     float3 vertices[3];
     optixGetTriangleVertexData( gas, prim_idx, sbtGASIndex, 0.f, vertices );
 
-    // print vertices in one line
-    printf("vertices: %f %f %f, %f %f %f, %f %f %f\n", vertices[0].x, vertices[0].y, vertices[0].z, vertices[1].x, vertices[1].y, vertices[1].z, vertices[2].x, vertices[2].y, vertices[2].z);
-
     float3 q;
-
     q.y = (max(vertices[0].y,max(vertices[1].y, vertices[2].y)) + min(vertices[0].y,min(vertices[1].y, vertices[2].y)))/2;
     q.z = (max(vertices[0].z,max(vertices[1].z, vertices[2].z)) + min(vertices[0].z,min(vertices[1].z, vertices[2].z)))/2;
 
@@ -216,8 +209,6 @@ extern "C" __global__ void __anyhit__ch()
     const float3 point = getPayloadPartPos();
 
     const float dist_p1_p2 = distance(point, q);
-    printf("]] ray_idx %d, prim_idx: %d, q: %f %f %f, point: %f %f % f, dist_p1_p2: %f\n", getPayloadRayidx(), prim_idx, q.x, q.y, q.z, point.x, point.y, point.z, dist_p1_p2);
-
     if(dist_p1_p2 < c && dist_p1_p2 > 0.0001){
         // const float3 ray_orig = optixGetWorldRayOrigin();
         // const float3 ray_dir  = optixGetWorldRayDirection();
@@ -229,11 +220,7 @@ extern "C" __global__ void __anyhit__ch()
                                         ray_idx == 0;// y and z are same
 
         if(is_ray_for_compute){
-            float3 hit_position = optixGetWorldRayOrigin() + optixGetRayTmax() * optixGetWorldRayDirection();// TODO
-            printf(" >> ray_idx: %d, dist: %f, point: %f %f %f, q: %f %f %f, point == q %d %d %d, origin %f %f %f, hit pos %f %f %f \n", ray_idx, dist_p1_p2, point.x, point.y, point.z, q.x, q.y, q.z,
-                    point.x == q.x, point.y == q.y, point.z == q.z, optixGetWorldRayOrigin().x, optixGetWorldRayOrigin().y, optixGetWorldRayOrigin().z,
-                    hit_position.x, hit_position.y, hit_position.z);
-
+            // const float3 hit_position = optixGetWorldRayOrigin() + optixGetRayTmax() * optixGetWorldRayDirection();
             const float epsilon = 1.0f;
             const float sigma = 1.0f;
             const float energy = lennardJonesPotential(point, q, dist_p1_p2,
