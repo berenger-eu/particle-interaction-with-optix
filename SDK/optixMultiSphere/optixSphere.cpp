@@ -894,17 +894,17 @@ int main( int argc, char* argv[] )
                 std::cout << "BoxDiv: " << boxDiv << std::endl;
                 std::cout << "CellWidth: " << cellWidth << std::endl;
                 std::cout << "NbLoops: " << NbLoops << std::endl;
-                std::cout << "NbLoops: " << NbLoops << std::endl;
+                for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
+                    std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false);
 
-                std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false);
-
-                ResultFrame frame;
-                frame.nbParticles = nbParticles;
-                frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
-                frame.nbLoops = NbLoops;
-                frame.boxDiv = boxDiv;
-                frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
-                results.push_back(frame);
+                    ResultFrame frame;
+                    frame.nbParticles = nbParticles;
+                    frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
+                    frame.nbLoops = NbLoops;
+                    frame.boxDiv = boxDiv;
+                    frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
+                    results.push_back(frame);
+                }
             }
         }
 
