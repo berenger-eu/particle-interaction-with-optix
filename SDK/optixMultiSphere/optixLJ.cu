@@ -183,18 +183,18 @@ extern "C" __global__ void __anyhit__ch()
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
     const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
-    const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
     const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
     const float c = getPayloadC();
 
     if(dist_squared < c*c){
+        const float3 dist_axis_squared{diff_pos_squared.y + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.z, diff_pos_squared.x + diff_pos_squared.y};
         // const float3 ray_orig = optixGetWorldRayOrigin();
         const float3 ray_dir  = optixGetWorldRayDirection();
 
         const float closest_axis_dist = fminf(dist_axis_squared.x, fminf(dist_axis_squared.y, dist_axis_squared.z));
         const bool closest_axis_is_ray_dir = (closest_axis_dist == dist_axis_squared.x && ray_dir.x != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0) ||
-                                            (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0);
+                                            (closest_axis_dist == dist_axis_squared.y && ray_dir.y != 0 && closest_axis_dist != dist_axis_squared.x) ||
+                                            (closest_axis_dist == dist_axis_squared.z && ray_dir.z != 0 && closest_axis_dist != dist_axis_squared.x && closest_axis_dist != dist_axis_squared.y);
 
         if(closest_axis_is_ray_dir){
             const float epsilon = 1.0f;
