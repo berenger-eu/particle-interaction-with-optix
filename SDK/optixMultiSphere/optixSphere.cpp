@@ -133,7 +133,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                 sphereVertices.push_back( sphereVertex );
             }
             // We add espilon to radius to avoid numerical issues
-            sphereRadii.push_back( sphereRadius + 1e-5f );
+            sphereRadii.push_back( sphereRadius*0.81649658092f + 1e-5f ); // sqrt(2/3)
 
             CUdeviceptr d_vertex_buffer;
             CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sphereVertices.size() * sizeof( float3 ) ) );
