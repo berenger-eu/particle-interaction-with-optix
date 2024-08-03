@@ -916,6 +916,9 @@ int main( int argc, char* argv[] )
     }
 
     if(runBench){
+        {// Fake first run to avoid cold start
+            core(10, 0.5, outfile, width, height, false);
+        }
         std::vector<ResultFrame> results;
 
         const float BoxWidth = 1.0;

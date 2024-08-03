@@ -877,6 +877,10 @@ int main( int argc, char* argv[] )
     }
 
     if(runBench){
+        {// Fake first run to warm up the GPU
+            const float  sphereRadius = 0.5;
+            core(10, sphereRadius, outfile, width, height, false);
+        }
         std::vector<ResultFrame> results;
 
         const float BoxWidth = 1.0;
