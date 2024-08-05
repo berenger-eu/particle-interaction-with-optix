@@ -26,6 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+//
+// Copyright (c) Inria 2024
+//
+
 struct Params
 {
     uchar4*                image;

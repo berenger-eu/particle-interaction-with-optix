@@ -26,7 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-// For optixSphere.cu
+//
+// Copyright (c) Inria 2024
+//
+
 
 struct Params
 {

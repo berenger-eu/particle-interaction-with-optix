@@ -26,6 +26,10 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+//
+// Copyright (c) Inria 2024
+//
+
 #include <optix.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
