@@ -40,7 +40,7 @@ static __forceinline__ __device__ void trace(
             tmax,
             0.0f,                // rayTime
             OptixVisibilityMask( 1 ),
-            OPTIX_RAY_FLAG_NONE,
+            OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT, // OPTIX_RAY_FLAG_NONE,
             0,                   // SBT offset
             0,                   // SBT stride
             0,                   // missSBTIndex
@@ -86,7 +86,7 @@ extern "C" __global__ void __raygen__rg()
     point.y = params.points[point_index + params.leading_dim];
     point.z = params.points[point_index + params.leading_dim*2];
     const float c = params.c;
-    const float half_ray = params.c*0.57735026919f; // sqrt(1/3)
+    const float half_ray = params.c*0.81649658092f; // sqrt(2/3)
 
     // const int ray_index = idx.y;
     // const float3 ray_origins[3] = {
