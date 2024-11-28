@@ -564,6 +564,7 @@ add_subdirectory( optixSphere             )
 add_subdirectory( optixMultiSphere        )
 add_subdirectory( optixTriangle           )
 add_subdirectory( optixMultiTriangle      )
+add_subdirectory( optixMultiCustom        )
 add_subdirectory( optixVolumeViewer       )
 add_subdirectory( optixWhitted            )
 
