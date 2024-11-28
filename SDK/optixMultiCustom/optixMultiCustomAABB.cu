@@ -36,6 +36,7 @@
 
 extern "C" __global__ void __intersection__sphere()
 {
+    //const int primitive_index = optixGetPrimitiveIndex();
     const HitGroupDataLJ* hit_group_data = reinterpret_cast<HitGroupDataLJ*>( optixGetSbtDataPointer() );
 
     // Retrieve ray origin
@@ -44,6 +45,9 @@ extern "C" __global__ void __intersection__sphere()
     // Retrieve sphere center and radius
     const float3 sphere_center = hit_group_data->sphere.center;
     const float  radius = hit_group_data->sphere.radius;
+
+    //printf("hit_group_data %p primitive_index %d] ray_orig: %f %f %f  -- sphere_center: %f %f %f \n",
+    //        hit_group_data, primitive_index, ray_orig.x, ray_orig.y, ray_orig.z, sphere_center.x, sphere_center.y, sphere_center.z);
 
     // Compute squared distance from ray origin to sphere center
     const float3 offset = ray_orig - sphere_center;

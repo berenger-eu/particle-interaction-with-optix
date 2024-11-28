@@ -432,6 +432,8 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                             cudaMemcpyHostToDevice
                             ) );
 
+                static_assert(sizeof(HitGroupSbtRecordLJ) % OPTIX_SBT_RECORD_ALIGNMENT == 0, "SBT record size must be aligned");
+
                 CUdeviceptr hitgroup_record;
                 size_t      hitgroup_record_size = sizeof( HitGroupSbtRecordLJ )*points.size();
                 CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &hitgroup_record ), hitgroup_record_size ) );
@@ -564,13 +566,14 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                         const auto diff = posSource - posTarget;
                         const float dist = sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
                         if(dist < cutoffRadius){
-                            std::cout << " - SRC pos = " << points[idxSource].x << " " << points[idxSource].y << " " << points[idxSource].z << std::endl;
+                            std::cout << idxSource << " - SRC pos = " << points[idxSource].x << " " << points[idxSource].y << " " << points[idxSource].z << std::endl;
                             energy += 4.0f * (pow(1.0f/dist, 12) - pow(1.0f/dist, 6));
                         }
                     }
                 }
-                std::cout << "Energy for particle " << idxTarget << " is " << energy 
-                    << " it has been computed as " << (pointsEnergy[idxTarget]) << std::endl;
+                std::cout << "Energy for particle " << idxTarget << " position " << points[idxTarget].x << " " << points[idxTarget].y << " " << points[idxTarget].z
+                          << " is " << energy 
+                          << " it has been computed as " << (pointsEnergy[idxTarget]) << std::endl;
             }
         }
     }
