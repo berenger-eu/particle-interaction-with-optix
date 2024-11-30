@@ -191,11 +191,31 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
 
             aabb_input.type                               = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
             aabb_input.customPrimitiveArray.aabbBuffers   = &d_aabb_buffer;
-            aabb_input.customPrimitiveArray.numPrimitives = static_cast<uint32_t>( all_aabb.size() );;
+            aabb_input.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(all_aabb.size());
 
-            uint32_t aabb_input_flags[1]                  = {OPTIX_GEOMETRY_FLAG_NONE};
-            aabb_input.customPrimitiveArray.flags         = aabb_input_flags;
-            aabb_input.customPrimitiveArray.numSbtRecords = 1;
+            std::vector<uint32_t> aabb_input_flags(all_aabb.size(), OPTIX_GEOMETRY_FLAG_NONE);
+            aabb_input.customPrimitiveArray.flags = aabb_input_flags.data();
+
+            aabb_input.customPrimitiveArray.numSbtRecords = static_cast<uint32_t>(all_aabb.size());
+
+            // Create and assign SBT index offset buffer
+            std::vector<unsigned int> sbt_indices(all_aabb.size());
+            for (uint32_t i = 0; i < all_aabb.size(); ++i) {
+                sbt_indices[i] = i;  // Unique SBT index for each primitive
+            }
+
+            CUdeviceptr d_sbt_index_buffer;
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_sbt_index_buffer),
+                                  sbt_indices.size() * sizeof(unsigned int)));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_sbt_index_buffer), sbt_indices.data(),
+                                sbt_indices.size() * sizeof(unsigned int),
+                                cudaMemcpyHostToDevice));
+
+            aabb_input.customPrimitiveArray.sbtIndexOffsetBuffer = d_sbt_index_buffer;
+            aabb_input.customPrimitiveArray.sbtIndexOffsetSizeInBytes = sizeof(unsigned int);
+            aabb_input.customPrimitiveArray.sbtIndexOffsetStrideInBytes = sizeof(unsigned int);
+            aabb_input.customPrimitiveArray.primitiveIndexOffset        = 0;
+
 
             OptixAccelBufferSizes gas_buffer_sizes;
             OPTIX_CHECK( optixAccelComputeMemoryUsage(
@@ -240,6 +260,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
 
             CUDA_CHECK( cudaFree( (void*)d_temp_buffer_gas ) );
             CUDA_CHECK( cudaFree( (void*)d_aabb_buffer ) );
+            CUDA_CHECK( cudaFree( (void*)d_sbt_index_buffer ) );
 
             size_t compacted_gas_size;
             CUDA_CHECK( cudaMemcpy( &compacted_gas_size, (void*)emitProperty.result, sizeof(size_t), cudaMemcpyDeviceToHost ) );
@@ -455,6 +476,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                             hitgroup_record_size,
                             cudaMemcpyHostToDevice
                             ) );
+                printf("hitgroup_record %p\n", hitgroup_record);
 
                 sbt.raygenRecord                = raygen_record;
                 sbt.missRecordBase              = miss_record;
