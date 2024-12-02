@@ -12,6 +12,7 @@ cd /projets/schnaps/optix-8-sdk/buildrtx/
 make -j 4
 ./bin/optixMultiSphere -f res.png -rb
 ./bin/optixMultiTriangle -f res.png -rb
+./bin/optixMultiCustom -rb
 
 cd /projets/schnaps/optix-8-sdk/Cuda-version/buildrtx/
 make -j 4
