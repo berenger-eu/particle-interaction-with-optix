@@ -301,7 +301,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 pipeline_compile_options.usesMotionBlur        = false;
                 pipeline_compile_options.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
                 pipeline_compile_options.numPayloadValues      = 6;
-                pipeline_compile_options.numAttributeValues    = 3; // TODO whitted::NUM_ATTRIBUTE_VALUES;
+                pipeline_compile_options.numAttributeValues    = 3; // We pass 3 values from the intersection program to the hit program
                 pipeline_compile_options.exceptionFlags        = OPTIX_EXCEPTION_FLAG_NONE;
                 pipeline_compile_options.pipelineLaunchParamsVariableName = "params";
                 pipeline_compile_options.usesPrimitiveTypeFlags = OPTIX_PRIMITIVE_TYPE_FLAGS_CUSTOM;
@@ -373,7 +373,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                 hitgroup_prog_group_desc.hitgroup.moduleAH            = module;
                 hitgroup_prog_group_desc.hitgroup.entryFunctionNameAH = "__anyhit__ch";
                 hitgroup_prog_group_desc.hitgroup.moduleIS            = sphere_module;
-                hitgroup_prog_group_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere"; // TODO use ours
+                hitgroup_prog_group_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere";
                 OPTIX_CHECK_LOG( optixProgramGroupCreate(
                             context,
                             &hitgroup_prog_group_desc,
@@ -476,7 +476,6 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
                             hitgroup_record_size,
                             cudaMemcpyHostToDevice
                             ) );
-                printf("hitgroup_record %p\n", hitgroup_record);
 
                 sbt.raygenRecord                = raygen_record;
                 sbt.missRecordBase              = miss_record;

@@ -142,24 +142,28 @@ extern "C" __global__ void __anyhit__ch()
     const unsigned int           prim_idx    = optixGetPrimitiveIndex();
     const OptixTraversableHandle gas         = optixGetGASTraversableHandle();
     const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
-    float4 q;
-    // sphere center (q.x, q.y, q.z), sphere radius q.w
-    optixGetSphereData( gas, prim_idx, sbtGASIndex, 0.f, &q );
+    const float3 q{__uint_as_float( optixGetAttribute_0() ),
+                   __uint_as_float( optixGetAttribute_1() ),
+                   __uint_as_float( optixGetAttribute_2() )};
 
     const float3 point = getPayloadPartPos();
     const float3 diff_pos{fabsf(point.x - q.x), fabsf(point.y - q.y), fabsf(point.z - q.z)};
     const float3 diff_pos_squared{diff_pos.x * diff_pos.x, diff_pos.y * diff_pos.y, diff_pos.z * diff_pos.z};
     const float dist_squared = diff_pos_squared.x + diff_pos_squared.y + diff_pos_squared.z;
-    const float c = getPayloadC();
+    //const float c = getPayloadC();
 
-    if(dist_squared < c*c){
+
+    // printf("sphere center: %f %f %f other %f %f %f\n", 
+    //         q.x, q.y, q.z, point.x, point.y, point.z);// TODO remove
+
+    //if(dist_squared < c*c){
         const float epsilon = 1.0f;
         const float sigma = 1.0f;
         const float energy = lennardJonesPotential(point, make_float3(q.x, q.y, q.z), dist_squared,
                                                     epsilon, sigma);
 
         setPayloadEnergy( getPayloadEnergy() + energy );
-    }
+    //}
 
     // Backface hit not used.
     // float  t_hit2 = __uint_as_float( optixGetAttribute_0() ); 
