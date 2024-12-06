@@ -149,14 +149,14 @@ extern "C" __global__ void __intersection__sphere()
     const float distance_squared = dot(offset, offset);
     const float radius_squared = radius * radius;
 
-    // // TODO remove
-    {
-        const int primitive_index = optixGetPrimitiveIndex();
-        const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
-        printf("primitive_index %d sbtGASIndex %d] ray_orig: %f %f %f  -- sphere_center: %f %f %f \n",
-                primitive_index, sbtGASIndex, 
-                ray_orig.x, ray_orig.y, ray_orig.z, sphere_center.x, sphere_center.y, sphere_center.z);
-    }
+    // // // TODO remove
+    // {
+    //     const int primitive_index = optixGetPrimitiveIndex();
+    //     const unsigned int           sbtGASIndex = optixGetSbtGASIndex();
+    //     printf("primitive_index %d sbtGASIndex %d] ray_orig: %f %f %f  -- sphere_center: %f %f %f \n",
+    //             primitive_index, sbtGASIndex, 
+    //             ray_orig.x, ray_orig.y, ray_orig.z, sphere_center.x, sphere_center.y, sphere_center.z);
+    // }
 
     // Check if the ray origin is inside the sphere
     if (distance_squared <= radius_squared && distance_squared >= 1E-16f)
