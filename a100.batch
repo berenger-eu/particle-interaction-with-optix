@@ -13,6 +13,7 @@ make -j 4
 ./bin/optixMultiSphere -f res.png -rb
 ./bin/optixMultiTriangle -f res.png -rb
 ./bin/optixMultiCustom -rb
+./bin/optixMultiSphereAABB -rb
 
 cd /projets/schnaps/optix-8-sdk/Cuda-version/build/
 make -j 4
