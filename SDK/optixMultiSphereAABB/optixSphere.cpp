@@ -126,6 +126,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
             CUdeviceptr d_vertex_buffer = 0;
             CUdeviceptr d_radius_buffer = 0;
             OptixBuildInput sphere_input = {};
+            uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
 
             if(false){            
                 std::vector<float> sphereRadii;
@@ -145,8 +146,6 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                 sphere_input.sphereArray.numVertices   = nbSpheres;
                 sphere_input.sphereArray.radiusBuffers = &d_radius_buffer;
                 sphere_input.sphereArray.singleRadius = 1;
-
-                uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
                 sphere_input.sphereArray.flags         = sphere_input_flags;
                 sphere_input.sphereArray.numSbtRecords = 1;
             }
@@ -178,8 +177,6 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                 sphere_input.type                               = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
                 sphere_input.customPrimitiveArray.aabbBuffers   = &d_aabb_buffer;
                 sphere_input.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(all_aabb.size());
-
-                uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
                 sphere_input.customPrimitiveArray.flags         = sphere_input_flags;
                 sphere_input.customPrimitiveArray.numSbtRecords = 1;
             }
