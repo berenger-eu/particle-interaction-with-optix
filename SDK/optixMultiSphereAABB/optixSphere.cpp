@@ -114,7 +114,6 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
             // sphere build input
-            std::vector<float> sphereRadii;
             for(int idxSphere = 0; idxSphere < nbSpheres; idxSphere++)
             {
                 const float3 sphereVertex = make_float3( 1.0f * (drand48()), 
@@ -122,30 +121,68 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                                                    1.0f * (drand48()) );
                 sphereVertices.push_back( sphereVertex );
             }
-            
-            sphereRadii.push_back( sphereRadius ); 
 
-            CUdeviceptr d_vertex_buffer;
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sphereVertices.size() * sizeof( float3 ) ) );
-            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_vertex_buffer ), sphereVertices.data(),
-                                    sphereVertices.size() * sizeof( float3 ), cudaMemcpyHostToDevice ) );
-
-            CUdeviceptr d_radius_buffer;
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_radius_buffer ), sphereRadii.size() * sizeof( float ) ) );
-            CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_radius_buffer ), sphereRadii.data(), sphereRadii.size() * sizeof( float ),
-                                    cudaMemcpyHostToDevice ) );
-
+            CUdeviceptr d_aabb_buffer=0;
+            CUdeviceptr d_vertex_buffer = 0;
+            CUdeviceptr d_radius_buffer = 0;
             OptixBuildInput sphere_input = {};
 
-            sphere_input.type                      = OPTIX_BUILD_INPUT_TYPE_SPHERES;
-            sphere_input.sphereArray.vertexBuffers = &d_vertex_buffer;
-            sphere_input.sphereArray.numVertices   = nbSpheres;
-            sphere_input.sphereArray.radiusBuffers = &d_radius_buffer;
-            sphere_input.sphereArray.singleRadius = 1;
+            if(false){            
+                std::vector<float> sphereRadii;
+                sphereRadii.push_back( sphereRadius ); 
 
-            uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
-            sphere_input.sphereArray.flags         = sphere_input_flags;
-            sphere_input.sphereArray.numSbtRecords = 1;
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_vertex_buffer ), sphereVertices.size() * sizeof( float3 ) ) );
+                CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_vertex_buffer ), sphereVertices.data(),
+                                        sphereVertices.size() * sizeof( float3 ), cudaMemcpyHostToDevice ) );
+
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_radius_buffer ), sphereRadii.size() * sizeof( float ) ) );
+                CUDA_CHECK( cudaMemcpy( reinterpret_cast<void*>( d_radius_buffer ), sphereRadii.data(), sphereRadii.size() * sizeof( float ),
+                                        cudaMemcpyHostToDevice ) );
+
+
+                sphere_input.type                      = OPTIX_BUILD_INPUT_TYPE_SPHERES;
+                sphere_input.sphereArray.vertexBuffers = &d_vertex_buffer;
+                sphere_input.sphereArray.numVertices   = nbSpheres;
+                sphere_input.sphereArray.radiusBuffers = &d_radius_buffer;
+                sphere_input.sphereArray.singleRadius = 1;
+
+                uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
+                sphere_input.sphereArray.flags         = sphere_input_flags;
+                sphere_input.sphereArray.numSbtRecords = 1;
+            }
+            else{
+                std::vector<OptixAabb> all_aabb;
+                for(int i = 0; i < nbSpheres; i++)
+                {
+                    const auto point = sphereVertices[i];
+                    OptixAabb   aabb;
+                    aabb.minX = point.x - sphereRadius;
+                    aabb.minY = point.y - sphereRadius;
+                    aabb.minZ = point.z - sphereRadius;
+                    aabb.maxX = point.x + sphereRadius;
+                    aabb.maxY = point.y + sphereRadius;
+                    aabb.maxZ = point.z + sphereRadius;
+                    all_aabb.push_back(aabb);
+                }
+
+                const size_t aabb_size = sizeof( OptixAabb )*all_aabb.size();
+                CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &d_aabb_buffer ), aabb_size ) );
+                CUDA_CHECK( cudaMemcpy(
+                            reinterpret_cast<void*>( d_aabb_buffer ),
+                            all_aabb.data(),
+                            aabb_size,
+                            cudaMemcpyHostToDevice
+                            ) );
+
+                // Our build input is a simple list of non-indexed triangle vertices
+                sphere_input.type                               = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+                sphere_input.customPrimitiveArray.aabbBuffers   = &d_aabb_buffer;
+                sphere_input.customPrimitiveArray.numPrimitives = static_cast<uint32_t>(all_aabb.size());
+
+                uint32_t sphere_input_flags[1]         = {OPTIX_GEOMETRY_FLAG_NONE};
+                sphere_input.customPrimitiveArray.flags         = sphere_input_flags;
+                sphere_input.customPrimitiveArray.numSbtRecords = 1;
+            }
 
             OptixAccelBufferSizes gas_buffer_sizes;
             OPTIX_CHECK( optixAccelComputeMemoryUsage( context, &accel_options, &sphere_input, 1, &gas_buffer_sizes ) );
@@ -183,6 +220,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
             CUDA_CHECK( cudaFree( (void*)d_temp_buffer_gas ) );
             CUDA_CHECK( cudaFree( (void*)d_vertex_buffer ) );
             CUDA_CHECK( cudaFree( (void*)d_radius_buffer ) );
+            CUDA_CHECK( cudaFree( (void*)d_aabb_buffer ) );
 
             size_t compacted_gas_size;
             CUDA_CHECK( cudaMemcpy( &compacted_gas_size, (void*)emitProperty.result, sizeof( size_t ), cudaMemcpyDeviceToHost ) );
