@@ -126,44 +126,40 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
 
             double sortTime = 0;
             if(sortParticles){
+                std::vector<float4> sphereVertices4;
+                for(size_t idxSphere = 0 ; idxSphere < sphereVertices.size() ; ++idxSphere){
+                    const auto pos = sphereVertices[idxSphere];
+                    sphereVertices4.push_back(make_float4(pos.x, pos.y, pos.z, 0.0f));
+                }
+
                 cudaStream_t stream;
                 CUDA_CHECK( cudaStreamCreate( &stream ) );
 
-                float3* pointsInput;
-                cudaMallocAsync( reinterpret_cast<void**>( &pointsInput ), sphereVertices.size() * sizeof( float3 ), stream );
-                cudaMemcpyAsync( reinterpret_cast<void*>( pointsInput ), sphereVertices.data(),
-                                        sphereVertices.size() * sizeof( float3 ), cudaMemcpyHostToDevice );
+                float4* d_sphereVertices4;
+                cudaMallocAsync( reinterpret_cast<void**>( &d_sphereVertices4 ), sphereVertices.size() * sizeof( float4 ), stream );
+                cudaMemcpyAsync( reinterpret_cast<void*>( d_sphereVertices4 ), sphereVertices4.data(),
+                                        sphereVertices.size() * sizeof( float4 ), cudaMemcpyHostToDevice );
 
-                float3* pointsOutput;
-                cudaMallocAsync( reinterpret_cast<void**>( &pointsOutput ), sphereVertices.size() * sizeof( float3 ), stream );
-
-                const int width = 1.f/sphereRadius;
-                const int nbCells = width*width*width;
-
-                int* particlesPerCell;
-                cudaMallocAsync( &particlesPerCell, nbCells*sizeof(int), stream );
-
-                int* prefixParCell;
-                cudaMallocAsync( &prefixParCell, (nbCells+1)*sizeof(int), stream );
                 CUDA_CHECK(cudaStreamSynchronize(stream));
 
                 SpTimer timerSort;
 
-                reorder(sphereVertices.size(), pointsOutput, pointsInput,
-                        particlesPerCell, prefixParCell, sphereRadius, stream);
+                reorder(sphereVertices.size(), d_sphereVertices4,
+                        sphereRadius, stream);
 
                 CUDA_CHECK(cudaStreamSynchronize(stream));
                 timerSort.stop();
                 sortTime = timerSort.getElapsed();
 
-                CUDA_CHECK( cudaMemcpy( sphereVertices.data(), pointsOutput, sphereVertices.size() * sizeof( float3 ), cudaMemcpyDeviceToHost ));
+                CUDA_CHECK( cudaMemcpy( sphereVertices4.data(), d_sphereVertices4, sphereVertices.size() * sizeof( float3 ), cudaMemcpyDeviceToHost ));
 
-                CUDA_CHECK( cudaFree( pointsInput ) );
-                CUDA_CHECK( cudaFree( pointsOutput ) );
-                CUDA_CHECK( cudaFree( prefixParCell ) );
-                CUDA_CHECK( cudaFree( particlesPerCell ) );
+                CUDA_CHECK( cudaFree( d_sphereVertices4 ) );
 
                 CUDA_CHECK( cudaStreamDestroy( stream ) );
+
+                for(size_t idxSphere = 0 ; idxSphere < sphereVertices.size() ; ++idxSphere){
+                    sphereVertices[idxSphere] = make_float3(sphereVertices4[idxSphere].x, sphereVertices4[idxSphere].y, sphereVertices4[idxSphere].z);
+                }
             }
 
             CUdeviceptr d_aabb_buffer=0;
