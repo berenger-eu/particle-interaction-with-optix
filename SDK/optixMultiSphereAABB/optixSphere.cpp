@@ -580,7 +580,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
 #include <chrono>
 #include <ctime>
 
-std::string getFilename(){
+std::string getFilename(const bool usedSort){
     // Get the current date and time
     std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -590,7 +590,7 @@ std::string getFilename(){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-spherecustom-" + std::string(buffer) + ".csv";
+    std::string filename = "results-spherecustom" + std::string(usedSort?"sorted":"") + "-" + std::string(buffer) + ".csv";
     return filename;
 }
 
@@ -687,9 +687,10 @@ int main( int argc, char* argv[] )
     }
 
     if(runBench){
+        const bool usedSort = true;
         {// Fake first run to warm up the GPU
             const float  sphereRadius = 0.5;
-            core(10, sphereRadius, outfile, width, height, false, true);
+            core(10, sphereRadius, outfile, width, height, false, usedSort);
         }
         std::vector<ResultFrame> results;
 
@@ -709,7 +710,7 @@ int main( int argc, char* argv[] )
                 std::cout << "CellWidth: " << cellWidth << std::endl;
                 std::cout << "NbLoops: " << NbLoops << std::endl;
                 for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
-                    std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false, true);
+                    std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false, usedSort);
 
                     ResultFrame frame;
                     frame.nbParticles = nbParticles;
@@ -722,7 +723,7 @@ int main( int argc, char* argv[] )
             }
         }
 
-        std::ofstream file(getFilename());
+        std::ofstream file(getFilename(usedSort));
         {
             file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
             file << std::endl;
@@ -737,6 +738,7 @@ int main( int argc, char* argv[] )
         }
     }
     else{
+        const bool usedSort = true;
         const float  sphereRadius = 1/double(boxDivisor);
 
         std::cout << "[LOG] nb spheres = " << nbSpheres << std::endl;
@@ -746,7 +748,7 @@ int main( int argc, char* argv[] )
         std::cout << "[LOG] width = " << width << std::endl;
         std::cout << "[LOG] height = " << height << std::endl;
 
-        core(nbSpheres, sphereRadius, outfile, width, height, true, true);
+        core(nbSpheres, sphereRadius, outfile, width, height, true, usedSort);
     }
 
     return 0;
