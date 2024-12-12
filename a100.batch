@@ -9,7 +9,7 @@
 source /projets/schnaps/optix-8-sdk/.modules
 
 cd /projets/schnaps/optix-8-sdk/build/
-cmake -DCMAKE_BUILD_TYPE=RELEASE .
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DCUDA_SM=80 .
 make -j 4
 ./bin/optixMultiSphere -f res.png -rb
 ./bin/optixMultiTriangle -f res.png -rb
