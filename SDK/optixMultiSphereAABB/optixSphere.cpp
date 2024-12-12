@@ -55,6 +55,8 @@
 
 #include "SpTimer.hpp"
 
+#include "sort.cuh"
+
 
 template <typename T>
 struct SbtRecord
@@ -78,7 +80,7 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 
 
 std::pair<double,double> core(const int nbSpheres, const float sphereRadius, const std::string outfile,
-          const int width, const int height, const bool checkResult){
+          const int width, const int height, const bool checkResult, const bool sortParticles){
     double timebuild = 0;
     double timecompute = 0;
 
@@ -120,6 +122,48 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                                                    1.0f * (drand48()), 
                                                    1.0f * (drand48()) );
                 sphereVertices.push_back( sphereVertex );
+            }
+
+            double sortTime = 0;
+            if(sortParticles){
+                cudaStream_t stream;
+                CUDA_CHECK( cudaStreamCreate( &stream ) );
+
+                float3* pointsInput;
+                cudaMallocAsync( reinterpret_cast<void**>( &pointsInput ), sphereVertices.size() * sizeof( float3 ), stream );
+                cudaMemcpyAsync( reinterpret_cast<void*>( pointsInput ), sphereVertices.data(),
+                                        sphereVertices.size() * sizeof( float3 ), cudaMemcpyHostToDevice );
+
+                float3* pointsOutput;
+                cudaMallocAsync( reinterpret_cast<void**>( &pointsOutput ), sphereVertices.size() * sizeof( float3 ), stream );
+
+                const int width = 1.f/sphereRadius;
+                const int nbCells = width*width*width;
+
+                int* particlesPerCell;
+                cudaMallocAsync( &particlesPerCell, nbCells*sizeof(int), stream );
+
+                int* prefixParCell;
+                cudaMallocAsync( &prefixParCell, (nbCells+1)*sizeof(int), stream );
+                CUDA_CHECK(cudaStreamSynchronize(stream));
+
+                SpTimer timerSort;
+
+                reorder(sphereVertices.size(), pointsOutput, pointsInput,
+                        particlesPerCell, prefixParCell, sphereRadius, stream);
+
+                CUDA_CHECK(cudaStreamSynchronize(stream));
+                timerSort.stop();
+                sortTime = timerSort.getElapsed();
+
+                CUDA_CHECK( cudaMemcpy( sphereVertices.data(), pointsOutput, sphereVertices.size() * sizeof( float3 ), cudaMemcpyDeviceToHost ));
+
+                CUDA_CHECK( cudaFree( pointsInput ) );
+                CUDA_CHECK( cudaFree( pointsOutput ) );
+                CUDA_CHECK( cudaFree( prefixParCell ) );
+                CUDA_CHECK( cudaFree( particlesPerCell ) );
+
+                CUDA_CHECK( cudaStreamDestroy( stream ) );
             }
 
             CUdeviceptr d_aabb_buffer=0;
@@ -209,8 +253,8 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
                                           ) );
 
             timer.stop();
-            std::cout << "[TIME] Time to build gas: " << timer.getElapsed() << " s" << std::endl;
-            timebuild = timer.getElapsed();
+            std::cout << "[TIME] Time to build gas: " << timer.getElapsed()+sortTime << " s" << std::endl;
+            timebuild = timer.getElapsed()+sortTime;
 
             d_gas_output_buffer = d_buffer_temp_output_gas_and_compacted_size;
 
@@ -645,7 +689,7 @@ int main( int argc, char* argv[] )
     if(runBench){
         {// Fake first run to warm up the GPU
             const float  sphereRadius = 0.5;
-            core(10, sphereRadius, outfile, width, height, false);
+            core(10, sphereRadius, outfile, width, height, false, true);
         }
         std::vector<ResultFrame> results;
 
@@ -665,7 +709,7 @@ int main( int argc, char* argv[] )
                 std::cout << "CellWidth: " << cellWidth << std::endl;
                 std::cout << "NbLoops: " << NbLoops << std::endl;
                 for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
-                    std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false);
+                    std::pair<double,double> timeInitCompute = core(nbSpheres, sphereRadius, outfile, width, height, false, true);
 
                     ResultFrame frame;
                     frame.nbParticles = nbParticles;
@@ -702,7 +746,7 @@ int main( int argc, char* argv[] )
         std::cout << "[LOG] width = " << width << std::endl;
         std::cout << "[LOG] height = " << height << std::endl;
 
-        core(nbSpheres, sphereRadius, outfile, width, height, true);
+        core(nbSpheres, sphereRadius, outfile, width, height, true, true);
     }
 
     return 0;

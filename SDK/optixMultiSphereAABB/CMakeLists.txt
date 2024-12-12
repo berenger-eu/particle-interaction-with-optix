@@ -33,6 +33,11 @@ OPTIX_add_sample_executable( optixMultiSphereAABB target_name
   OPTIONS -rdc true
   )
 
+# Create lib from sort.cu
+cuda_add_library( sort
+  sort.cu
+  )
+
 target_link_libraries( ${target_name}
-  ${CUDA_LIBRARIES}
+  sort ${CUDA_LIBRARIES}
   )
