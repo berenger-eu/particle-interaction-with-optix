@@ -24,6 +24,7 @@ make -j 4
 ./bin/optixMultiSphereAABB -rb -gs -us
 
 cd /projets/schnaps/optix-8-sdk/Cuda-version/buildrtx/
+cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCUDA_SM=75
 make -j 4
 ./cudaLJ
 ./cudaLJ -gs
