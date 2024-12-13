@@ -682,7 +682,7 @@ auto getFilename(const bool gensurface){
 
     // Create the filename with the date and time
     std::string filename = "results"
-                             + (gensurface ? "-surface" : "")
+                             + std::string(gensurface ? "-surface" : "")
                              + "-" + std::string(buffer) + ".csv";
     return filename;
 }
