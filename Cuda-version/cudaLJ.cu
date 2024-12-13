@@ -195,8 +195,7 @@ __global__ void InitParticles(const Point3D<NumType> inBoxWidth,
 }
 
 template <typename NumType>
-__global__ void InitParticlesSphere(const Point3D<NumType> inBoxWidth,
-                              const Point3D<NumType> inCellWidth,
+__global__ void InitParticlesSphere(
                               ParticlesContainer<NumType> inOutParticles,
                               const NumType espilon,
                               curandState_t* particleCurandStates){
@@ -208,12 +207,12 @@ __global__ void InitParticlesSphere(const Point3D<NumType> inBoxWidth,
         NumType theta = 2.0 * M_PI * curand_uniform(&curandState); // Random angle between 0 and 2π
         NumType phi = acos(1.0 - 2.0 * curand_uniform(&curandState)); // Random angle between 0 and π
 
-        inOutParticles.x[idxPart] = (sin(phi) * cos(theta) + 0.5) * inBoxWidth.x;
-        assert(0 <= inOutParticles.x[idxPart] && inOutParticles.x[idxPart] < inBoxWidth.x);
-        inOutParticles.y[idxPart] = (sin(phi) * sin(theta) + 0.5) * inBoxWidth.y;
-        assert(0 <= inOutParticles.y[idxPart] && inOutParticles.y[idxPart] < inBoxWidth.y);
-        inOutParticles.z[idxPart] = (cos(phi) + 0.5) * inBoxWidth.z;
-        assert(0 <= inOutParticles.z[idxPart] && inOutParticles.z[idxPart] < inBoxWidth.z);
+        inOutParticles.x[idxPart] = min(NumType(2 - 1e-6f ), (sin(phi) * cos(theta) + 1));
+        assert(0 <= inOutParticles.x[idxPart] && inOutParticles.x[idxPart] < 2);
+        inOutParticles.y[idxPart] = min(NumType(2 - 1e-6f ), (sin(phi) * sin(theta) + 1));
+        assert(0 <= inOutParticles.y[idxPart] && inOutParticles.y[idxPart] < 2);
+        inOutParticles.z[idxPart] = min(NumType(2 - 1e-6f ), (cos(phi) + 1));
+        assert(0 <= inOutParticles.z[idxPart] && inOutParticles.z[idxPart] < 2);
         inOutParticles.index[idxPart] = idxPart;
         inOutParticles.v[idxPart] = -1;
     }
@@ -272,7 +271,8 @@ __global__ void ComputeNbInteractions(const Point3D<NumType> inCellWidth,
         partPos.z = inOutParticles.z[idxPart];
         // Compute new cell coord
         const Point3D<int> coord = PosToCellCoord(inCellWidth, partPos);
-        assert(partPos.x < inGridDim.x && partPos.y < inGridDim.y && partPos.z < inGridDim.z);
+
+        assert(coord.x < inGridDim.x && coord.y < inGridDim.y && coord.z < inGridDim.z);
 
         const int cellIdx = CellCoordToIndex(inGridDim, coord);
         {// Current cell
@@ -313,6 +313,8 @@ __global__ void ComputeParticleInterationsParPartNoLoop(const Point3D<NumType> i
         partPos.z = inOutParticles.z[uniqueIdx];
         // Compute new cell coord
         Point3D<int> coord = PosToCellCoord(inCellWidth, partPos);
+
+        assert(coord.x < inGridDim.x && coord.y < inGridDim.y && coord.z < inGridDim.z);
 
         for(int idxZ = M_Max(0, coord.z-1) ; idxZ <= M_Min(inGridDim.z-1, coord.z+1) ; ++idxZ){
             for(int idxY = M_Max(0, coord.y-1) ; idxY <= M_Min(inGridDim.y-1, coord.y+1) ; ++idxY){
@@ -355,6 +357,9 @@ __global__ void ComputeNbParticlePerCells(const Point3D<NumType> inCellWidth,
         // Compute new cell coord
         const Point3D<int> coord = PosToCellCoord(inCellWidth, inParticles.x[idxPart],
                                                        inParticles.y[idxPart], inParticles.z[idxPart]);
+
+        assert(coord.x < inGridDim.x && coord.y < inGridDim.y && coord.z < inGridDim.z);
+
         // Current cell unique index
         const int cellIdx = CellCoordToIndex(inGridDim, coord);
         assert(cellIdx < inGridDim.x*inGridDim.y*inGridDim.z);
@@ -447,6 +452,9 @@ __global__ void MoveParticlesToNewCells(const Point3D<NumType> inCellWidth,
         // Compute new cell coord
         const Point3D<int> coord = PosToCellCoord(inCellWidth, inParticles.x[idxPart],
                                                        inParticles.y[idxPart], inParticles.z[idxPart]);
+
+        assert(coord.x < inGridDim.x && coord.y < inGridDim.y && coord.z < inGridDim.z);
+
         // Compute new cell index
         const int cellIdx = CellCoordToIndex(inGridDim, coord);
         assert(cellIdx < inGridDim.x*inGridDim.y*inGridDim.z);
@@ -505,7 +513,8 @@ struct ResultFrame{
 
 
 template <typename NumType = float>
-auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumType inCutoff, 
+auto executeSimulation(const int inNbParticles, const int inNbLoops, 
+                        const NumType boxWidth1Dim, const NumType inCutoff, 
                         const bool inCheckResult, const bool gensurface){
     const int DefaultNbThreads = 128;
     const int DefaultNbBlocks  = std::max(int((inNbParticles+DefaultNbThreads-1)/DefaultNbThreads), 1);
@@ -514,7 +523,7 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     std::list<void*> cuPtrToDelete;
     // Configuration
     const Point3D<NumType> origin{0, 0, 0};
-    const Point3D<NumType> BoxWidth{1, 1, 1};
+    const Point3D<NumType> BoxWidth{boxWidth1Dim, boxWidth1Dim, boxWidth1Dim};
     const Point3D<NumType> CellWidth{inCutoff, inCutoff, inCutoff};
     const Point3D<int> GridDim{static_cast<int>(BoxWidth.x/inCutoff),
                                     static_cast<int>(BoxWidth.y/inCutoff),
@@ -591,7 +600,7 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     for(int idxLoop = 0 ; idxLoop < inNbLoops ; ++idxLoop){
         // Init particles and set random positions
         if(gensurface==true){
-            InitParticlesSphere<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, 
+            InitParticlesSphere<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(particles, 
                                                                       std::numeric_limits<NumType>::epsilon(),
                                                                       particleCurandStates);
         }else{
@@ -722,7 +731,12 @@ int main(int argc, char** argv){
                 std::cout << "CellWidth: " << sphereRadius << std::endl;
                 std::cout << "NbLoops: " << NbLoops << std::endl;
 
-                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, sphereRadius, false, gensurface);
+                const float boxWidth = std::ceil(2.0 / sphereRadius) * sphereRadius;
+                const int gridDim = boxWidth/sphereRadius;
+                const float cellWidth = boxWidth/gridDim;
+
+                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, 
+                                            boxWidth, cellWidth, false, gensurface);
 
                 ResultFrame frame{nbParticles, nbInteractions, NbLoops, boxDiv, std::move(results)};
 
@@ -744,7 +758,8 @@ int main(int argc, char** argv){
                 std::cout << "CellWidth: " << cellWidth << std::endl;
                 std::cout << "NbLoops: " << NbLoops << std::endl;
 
-                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, cellWidth, false, gensurface);
+                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, 
+                                                    1, cellWidth, false, gensurface);
 
                 ResultFrame frame{nbParticles, nbInteractions, NbLoops, boxDiv, std::move(results)};
 
