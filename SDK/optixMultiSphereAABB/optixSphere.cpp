@@ -724,7 +724,9 @@ int main( int argc, char* argv[] )
                 for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
                     const double particlePerCell = double(nbParticles)/double(nbBoxes);
                     const double expectedNbNeighbors = 9*particlePerCell;
-                    const double sphereRadius = acos(1. - ((2*expectedNbNeighbors)/nbParticles));
+                    const double coef = 1. - ((2*expectedNbNeighbors)/nbParticles);
+                    const double validCoef = std::min(1.0, std::max(-1.0, coef));
+                    const double sphereRadius = acos(validCoef);
                     const int nbSpheres = nbParticles;
 
                     std::cout << "NbParticles: " << nbParticles << std::endl;
