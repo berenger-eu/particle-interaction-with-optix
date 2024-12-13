@@ -194,6 +194,32 @@ __global__ void InitParticles(const Point3D<NumType> inBoxWidth,
     particleCurandStates[uniqueIdx] = curandState;
 }
 
+template <typename NumType>
+__global__ void InitParticlesSphere(const Point3D<NumType> inBoxWidth,
+                              const Point3D<NumType> inCellWidth,
+                              ParticlesContainer<NumType> inOutParticles,
+                              const NumType espilon,
+                              curandState_t* particleCurandStates){
+    const int nbThreads = blockDim.x * gridDim.x;
+    const int uniqueIdx = blockIdx.x * blockDim.x + threadIdx.x;
+    curandState_t curandState = particleCurandStates[uniqueIdx];
+
+    for(int idxPart = uniqueIdx; idxPart < inOutParticles.nbParticles ; idxPart += nbThreads){
+        NumType theta = 2.0 * M_PI * curand_uniform(&curandState); // Random angle between 0 and 2π
+        NumType phi = acos(1.0 - 2.0 * curand_uniform(&curandState)); // Random angle between 0 and π
+
+        inOutParticles.x[idxPart] = (sin(phi) * cos(theta) + 0.5) * inBoxWidth.x;
+        assert(0 <= inOutParticles.x[idxPart] && inOutParticles.x[idxPart] < inBoxWidth.x);
+        inOutParticles.y[idxPart] = (sin(phi) * sin(theta) + 0.5) * inBoxWidth.y;
+        assert(0 <= inOutParticles.y[idxPart] && inOutParticles.y[idxPart] < inBoxWidth.y);
+        inOutParticles.z[idxPart] = (cos(phi) + 0.5) * inBoxWidth.z;
+        assert(0 <= inOutParticles.z[idxPart] && inOutParticles.z[idxPart] < inBoxWidth.z);
+        inOutParticles.index[idxPart] = idxPart;
+        inOutParticles.v[idxPart] = -1;
+    }
+    particleCurandStates[uniqueIdx] = curandState;
+}
+
 
 template <typename NumType>
 __global__ void PrintParticles(const ParticlesContainer<NumType> inParticles){
@@ -479,7 +505,8 @@ struct ResultFrame{
 
 
 template <typename NumType = float>
-auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumType inCutoff, const bool inCheckResult){
+auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumType inCutoff, 
+                        const bool inCheckResult, const bool gensurface){
     const int DefaultNbThreads = 128;
     const int DefaultNbBlocks  = std::max(int((inNbParticles+DefaultNbThreads-1)/DefaultNbThreads), 1);
 
@@ -495,6 +522,7 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
     const int NbCells = GridDim.x * GridDim.y * GridDim.z;
 
     std::cout << "Start Execution" << std::endl;
+    std::cout << " - gensurface: " << gensurface << std::endl;
     std::cout << " - NbParticles: " << inNbParticles << std::endl;
     std::cout << " - NbLoops: " << inNbLoops << std::endl;
     std::cout << " - Cutoff: " << inCutoff << std::endl;
@@ -562,9 +590,15 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
 
     for(int idxLoop = 0 ; idxLoop < inNbLoops ; ++idxLoop){
         // Init particles and set random positions
-        InitParticles<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, 
+        if(gensurface==true){
+            InitParticlesSphere<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, 
                                                                       std::numeric_limits<NumType>::epsilon(),
                                                                       particleCurandStates);
+        }else{
+            InitParticles<NumType><<<DefaultNbBlocks, DefaultNbThreads>>>(BoxWidth, CellWidth, particles, 
+                                                                      std::numeric_limits<NumType>::epsilon(),
+                                                                      particleCurandStates);
+        }
         CUDA_ASSERT( cudaDeviceSynchronize());
 
         initTimer.start();
@@ -637,7 +671,7 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops, const NumTy
 #include <chrono>
 #include <ctime>
 
-auto getFilename(){
+auto getFilename(const bool gensurface){
     // Get the current date and time
     std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -647,42 +681,75 @@ auto getFilename(){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-" + std::string(buffer) + ".csv";
+    std::string filename = "results"
+                             + (gensurface ? "-surface" : "")
+                             + "-" + std::string(buffer) + ".csv";
     return filename;
 }
 
 #include <fstream>
 
-int main(){
+int main(int argc, char** argv){
     // nvcc -gencode arch=compute_75,code=sm_75 cutrix/testParticlesPaper.cu -o test.exe --std=c++17 -O3 --ptxas-options=-v
     // nvcc -gencode arch=compute_75,code=sm_75 cutrix/testParticlesPaper.cu -o test.exe --std=c++17 -O0 -g --ptxas-options=-v -lgomp -lineinfo --generate-line-info
     //executeSimulation<double>(8, 1, 1./2., true);
     //return 0;
 
+    bool gensurface = false;
+    if( argc == 2 &&  (std::string(argv[1]) == "--gensurface" || std::string(argv[1]) == "-gs" ))
+    {
+        gensurface = true;
+    }
+
     std::vector<ResultFrame> allResults;
 
     using NumType = float;
-    const NumType BoxWidth = 1.0;
-    const int NbLoops = 5;// put 200
-    const int MaxParticlesPerCell = 32;
-    const int MaxBoxDiv = 32;// put 32
-    for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
-        const NumType cellWidth = BoxWidth/boxDiv;
-        const int nbBoxes = boxDiv*boxDiv*boxDiv;
-        for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
-            std::cout << "NbParticles: " << nbParticles << std::endl;
-            std::cout << "BoxDiv: " << boxDiv << std::endl;
-            std::cout << "CellWidth: " << cellWidth << std::endl;
-            std::cout << "NbLoops: " << NbLoops << std::endl;
+    if(gensurface){
+        const int NbLoops = 5;// put 200
+        const int MaxParticlesPerCell = 32;
+        const int MaxBoxDiv = 32;// put 32
+        for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
+            const int nbBoxes = boxDiv*boxDiv*boxDiv;
+            for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
+                const double particlePerCell = double(nbParticles)/double(nbBoxes);
+                const double expectedNbNeighbors = 9*particlePerCell;
+                const double sphereRadius = acos(1. - ((2*expectedNbNeighbors)/nbParticles));
 
-            auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, cellWidth, false);
+                std::cout << "NbParticles: " << nbParticles << std::endl;
+                std::cout << "BoxDiv: " << boxDiv << std::endl;
+                std::cout << "CellWidth: " << sphereRadius << std::endl;
+                std::cout << "NbLoops: " << NbLoops << std::endl;
 
-            ResultFrame frame{nbParticles, nbInteractions, NbLoops, boxDiv, std::move(results)};
+                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, sphereRadius, false, gensurface);
 
-            allResults.emplace_back(std::move(frame));
+                ResultFrame frame{nbParticles, nbInteractions, NbLoops, boxDiv, std::move(results)};
+
+                allResults.emplace_back(std::move(frame));
+            }
         }
     }
+    else{
+        const NumType BoxWidth = 1.0;
+        const int NbLoops = 5;// put 200
+        const int MaxParticlesPerCell = 32;
+        const int MaxBoxDiv = 32;// put 32
+        for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
+            const NumType cellWidth = BoxWidth/boxDiv;
+            const int nbBoxes = boxDiv*boxDiv*boxDiv;
+            for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
+                std::cout << "NbParticles: " << nbParticles << std::endl;
+                std::cout << "BoxDiv: " << boxDiv << std::endl;
+                std::cout << "CellWidth: " << cellWidth << std::endl;
+                std::cout << "NbLoops: " << NbLoops << std::endl;
 
+                auto [nbInteractions, results] = executeSimulation<NumType>(nbParticles, NbLoops, cellWidth, false, gensurface);
+
+                ResultFrame frame{nbParticles, nbInteractions, NbLoops, boxDiv, std::move(results)};
+
+                allResults.emplace_back(std::move(frame));
+            }
+        }
+    }
 
     // We will print the results in a csv file
     // the first columns will contains nbParticles, nbInteractions, NbLoops, boxDiv
@@ -690,7 +757,7 @@ int main(){
     // then we put the results for each method using the vecMethodName-[time, gflops, interactionsPerSecond]
 
     // Open the file
-    std::ofstream file(getFilename());
+    std::ofstream file(getFilename(gensurface));
     {
         file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,interactionsperparticle,timeinit,timecompute,timetotal";
         file << std::endl;

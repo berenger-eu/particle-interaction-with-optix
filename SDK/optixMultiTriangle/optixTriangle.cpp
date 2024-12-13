@@ -108,21 +108,37 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 
 
 std::pair<double,double> core(const int nbPoints, const float cutoffRadius, const std::string outfile,
-          const int width, const int height, const bool checkResult){
+          const int width, const int height, const bool checkResult, const bool gensurface){
     double timebuild = 0;
     double timecompute = 0;
     try
     {
         std::vector<float3> points;
         // Create random points positions between O and 1
-        for (int i = 0; i < nbPoints; i++)
-        {
-            float3 point = make_float3( 1.0f * (drand48()), 
-                                                    1.0f * (drand48()), 
-                                                    1.0f * (drand48()) );
-            points.push_back(point);
-        }
+        if(gensurface){
+            for(int idxSphere = 0; idxSphere < nbPoints; idxSphere++)
+            {
+                double theta = 2.0 * M_PI * drand48(); // Random angle between 0 and 2π
+                double phi = acos(1.0 - 2.0 * drand48()); // Random angle between 0 and π
 
+                // Convert spherical coordinates to Cartesian coordinates
+                double x = sin(phi) * cos(theta) + 0.5;
+                double y = sin(phi) * sin(theta) + 0.5;
+                double z = cos(phi) + 0.5;
+
+                const float3 sphereVertex = make_float3( x, y, z);
+                points.push_back( sphereVertex );
+            }                    
+        }
+        else{
+            for (int i = 0; i < nbPoints; i++)
+            {
+                float3 point = make_float3( 1.0f * (drand48()), 
+                                                        1.0f * (drand48()), 
+                                                        1.0f * (drand48()) );
+                points.push_back(point);
+            }
+        }
         std::vector<float> pointsEnergy;
         //
         // Initialize CUDA and create OptiX context
@@ -813,7 +829,7 @@ std::pair<double,double> core(const int nbPoints, const float cutoffRadius, cons
 #include <chrono>
 #include <ctime>
 
-std::string getFilename(){
+std::string getFilename(const bool gensurface){
     // Get the current date and time
     std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -823,7 +839,9 @@ std::string getFilename(){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-triangle-" + std::string(buffer) + ".csv";
+    std::string filename = "results-triangle"
+                             + std::string(gensurface ? "-surface" : "")
+                             + "-" + std::string(buffer) + ".csv";
     return filename;
 }
 
@@ -849,6 +867,7 @@ void printUsageAndExit( const char* argv0 )
     std::cerr << "         --nbpoints | -np           Specify the number of particles\n";
     std::cerr << "         --boxdivisor | -bd          Specify the divisor to compute the cutoff (cutoff = 1/x) \n";
     std::cerr << "         --runbench | -rb            Ask to run the benchmark (erase all the other arguments) \n";
+    std::cerr << "         --gensurface | -gs          Ask to generate the surface of the sphere (default is random) \n";
     std::cerr << "         --help | -h                 Print this usage message\n";
     std::cerr << "         --dim=<width>x<height>      Set image dimensions; defaults to 512x384\n";
     exit( 1 );
@@ -862,6 +881,7 @@ int main( int argc, char* argv[] )
     int         width  = 1024;
     int         height =  768;
     bool        runBench = false;
+    bool        gensurface = false;
 
     for( int i = 1; i < argc; ++i )
     {
@@ -907,6 +927,10 @@ int main( int argc, char* argv[] )
         {
             runBench = true;
         }
+        else if( arg == "--gensurface" || arg == "-gs" )
+        {
+            gensurface = true;
+        }
         else if( arg.substr( 0, 6 ) == "--dim=" )
         {
             const std::string dims_arg = arg.substr( 6 );
@@ -920,51 +944,103 @@ int main( int argc, char* argv[] )
     }
 
     if(runBench){
-        {// Fake first run to avoid cold start
-            core(10, 0.5, outfile, width, height, false);
-        }
-        std::vector<ResultFrame> results;
+        if(gensurface){
+            {// Fake first run to avoid cold start
+                const float  sphereRadius = 0.5;
+                core(10, sphereRadius, outfile, width, height, false, gensurface);
+            }
+            std::vector<ResultFrame> results;
 
-        const float BoxWidth = 1.0;
-        const int NbLoops = 5;// put 200
-        const int MaxParticlesPerCell = 32;
-        const int MaxBoxDiv = 32;// put 32
-        for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
-            const float cellWidth = BoxWidth/boxDiv;
-            const int nbBoxes = boxDiv*boxDiv*boxDiv;
-            for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
-                const float  cutoffRadius = cellWidth;
-                const int nbPoints = nbParticles;
+            const int NbLoops = 5;// put 200
+            const int MaxParticlesPerCell = 32;
+            const int MaxBoxDiv = 32;// put 32
+            for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
+                const int nbBoxes = boxDiv*boxDiv*boxDiv;
+                for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
+                    const double particlePerCell = double(nbParticles)/double(nbBoxes);
+                    const double expectedNbNeighbors = 9*particlePerCell;
+                    const double sphereRadius = acos(1. - ((2*expectedNbNeighbors)/nbParticles));
 
-                std::cout << "NbParticles: " << nbParticles << std::endl;
-                std::cout << "BoxDiv: " << boxDiv << std::endl;
-                std::cout << "CellWidth: " << cellWidth << std::endl;
-                std::cout << "NbLoops: " << NbLoops << std::endl;
-                for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
-                    std::pair<double,double> timeInitCompute = core(nbPoints, cutoffRadius, outfile, width, height, false);
+                    std::cout << "NbParticles: " << nbParticles << std::endl;
+                    std::cout << "BoxDiv: " << boxDiv << std::endl;
+                    std::cout << "CellWidth: " << sphereRadius << std::endl;
+                    std::cout << "NbLoops: " << NbLoops << std::endl;
+                    for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
+                        std::pair<double,double> timeInitCompute = core(nbPoints, sphereRadius, outfile, width, height, false, gensurface);
 
-                    ResultFrame frame;
-                    frame.nbParticles = nbParticles;
-                    frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
-                    frame.nbLoops = NbLoops;
-                    frame.boxDiv = boxDiv;
-                    frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
-                    results.push_back(frame);
+                        ResultFrame frame;
+                        frame.nbParticles = nbParticles;
+                        frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
+                        frame.nbLoops = NbLoops;
+                        frame.boxDiv = boxDiv;
+                        frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
+                        results.push_back(frame);
+                    }
+                }
+            }
+
+            std::ofstream file(getFilename(gensurface));
+            {
+                file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
+                file << std::endl;
+            }
+            for(const ResultFrame& frame : results){
+                for(const ResultFrame::AResult& res : frame.results){
+                    file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
+                    file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv);
+                    file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+                    file << std::endl;
                 }
             }
         }
+        else{
+            {// Fake first run to avoid cold start
+                const float  sphereRadius = 0.5;
+                core(10, sphereRadius, outfile, width, height, false, gensurface);
+            }
+            std::vector<ResultFrame> results;
 
-        std::ofstream file(getFilename());
-        {
-            file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
-            file << std::endl;
-        }
-        for(const ResultFrame& frame : results){
-            for(const ResultFrame::AResult& res : frame.results){
-                file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
-                file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv);
-                file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+            const float BoxWidth = 1.0;
+            const int NbLoops = 5;// put 200
+            const int MaxParticlesPerCell = 32;
+            const int MaxBoxDiv = 32;// put 32
+            for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
+                const float cellWidth = BoxWidth/boxDiv;
+                const int nbBoxes = boxDiv*boxDiv*boxDiv;
+                for(int nbParticles = nbBoxes ; nbParticles <= nbBoxes*MaxParticlesPerCell ; nbParticles *= 2){
+                    const float  cutoffRadius = cellWidth;
+                    const int nbPoints = nbParticles;
+
+                    std::cout << "NbParticles: " << nbParticles << std::endl;
+                    std::cout << "BoxDiv: " << boxDiv << std::endl;
+                    std::cout << "CellWidth: " << cellWidth << std::endl;
+                    std::cout << "NbLoops: " << NbLoops << std::endl;
+                    for(int idxLoop = 0 ; idxLoop < NbLoops ; ++idxLoop){
+                        std::pair<double,double> timeInitCompute = core(nbPoints, cutoffRadius, outfile, width, height, false, gensurface);
+
+                        ResultFrame frame;
+                        frame.nbParticles = nbParticles;
+                        frame.nbInteractions = nbParticles*(nbParticles/nbBoxes)*27;
+                        frame.nbLoops = NbLoops;
+                        frame.boxDiv = boxDiv;
+                        frame.results.push_back({timeInitCompute.first, timeInitCompute.second, timeInitCompute.first+timeInitCompute.second});
+                        results.push_back(frame);
+                    }
+                }
+            }
+
+            std::ofstream file(getFilename(gensurface));
+            {
+                file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
                 file << std::endl;
+            }
+            for(const ResultFrame& frame : results){
+                for(const ResultFrame::AResult& res : frame.results){
+                    file << frame.nbParticles << "," << frame.nbInteractions << "," << frame.nbLoops << "," << frame.boxDiv << "," << frame.boxDiv*frame.boxDiv*frame.boxDiv;
+                    file << "," << double(frame.nbParticles)/(frame.boxDiv*frame.boxDiv*frame.boxDiv);
+                    file << "," << res.timeInit  << "," << res.timeCompute << "," << res.timeTotal;
+                    file << std::endl;
+                }
             }
         }
     }
@@ -978,7 +1054,7 @@ int main( int argc, char* argv[] )
         std::cout << "[LOG] width = " << width << std::endl;
         std::cout << "[LOG] height = " << height << std::endl;
 
-        core(nbPoints, cutoffRadius, outfile, width, height, true);
+        core(nbPoints, cutoffRadius, outfile, width, height, true, gensurface);
     }
 
     return 0;

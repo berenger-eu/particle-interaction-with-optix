@@ -587,7 +587,7 @@ std::pair<double,double> core(const int nbSpheres, const float sphereRadius, con
 #include <chrono>
 #include <ctime>
 
-std::string getFilename(const bool usedSort){
+std::string getFilename(const bool usedSort, const bool gensurface){
     // Get the current date and time
     std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
@@ -597,7 +597,10 @@ std::string getFilename(const bool usedSort){
     std::strftime(buffer, sizeof(buffer), "%Y%m%d-%H%M%S", ptm);
 
     // Create the filename with the date and time
-    std::string filename = "results-spherecustom" + std::string(usedSort?"sorted":"") + "-" + std::string(buffer) + ".csv";
+    std::string filename = "results-spherecustom" 
+                                + std::string(usedSort?"sorted":"") 
+                                + std::string(gensurface?"gensurface":"")
+                                + "-" + std::string(buffer) + ".csv";
     return filename;
 }
 
@@ -742,7 +745,7 @@ int main( int argc, char* argv[] )
                 }
             }
 
-            std::ofstream file(getFilename(usedSort));
+            std::ofstream file(getFilename(usedSort, gensurface));
             {
                 file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
                 file << std::endl;
@@ -792,7 +795,7 @@ int main( int argc, char* argv[] )
                 }
             }
 
-            std::ofstream file(getFilename(usedSort));
+            std::ofstream file(getFilename(usedSort, gensurface));
             {
                 file << "NbParticles,NbInteractions,NbLoops,boxDiv,nbCells,partspercell,timeinit,timecompute,timetotal";
                 file << std::endl;
