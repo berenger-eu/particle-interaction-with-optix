@@ -15,7 +15,15 @@ make -j 4
 ./bin/optixMultiTriangle -f res.png -rb
 ./bin/optixMultiCustom -rb
 ./bin/optixMultiSphereAABB -rb
+./bin/optixMultiSphereAABB -rb -us
+
+./bin/optixMultiSphere -f res.png -rb -gs
+./bin/optixMultiTriangle -f res.png -rb -gs
+./bin/optixMultiCustom -rb -gs
+./bin/optixMultiSphereAABB -rb -gs
+./bin/optixMultiSphereAABB -rb -gs -us
 
 cd /projets/schnaps/optix-8-sdk/Cuda-version/buildrtx/
 make -j 4
 ./cudaLJ
+./cudaLJ -gs
