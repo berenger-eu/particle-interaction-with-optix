@@ -528,7 +528,7 @@ auto executeSimulation(const int inNbParticles, const int inNbLoops,
     const Point3D<int> GridDim{static_cast<int>(BoxWidth.x/inCutoff),
                                     static_cast<int>(BoxWidth.y/inCutoff),
                                     static_cast<int>(BoxWidth.z/inCutoff)};
-    const int NbCells = GridDim.x * GridDim.y * GridDim.z;
+    const long long int NbCells = (long long int)GridDim.x * (long long int)GridDim.y * (long long int)GridDim.z;
 
     std::cout << "Start Execution" << std::endl;
     std::cout << " - gensurface: " << gensurface << std::endl;
