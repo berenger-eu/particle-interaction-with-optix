@@ -642,7 +642,7 @@ int main( int argc, char* argv[] )
     int         height =  768;
     bool        runBench = false;
     bool        gensurface = false;
-    bool        usedSort = true;
+    bool        usedSort = false;
 
     for( int i = 1; i < argc; ++i )
     {
