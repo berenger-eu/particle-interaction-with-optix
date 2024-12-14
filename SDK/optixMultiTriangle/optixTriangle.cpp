@@ -952,7 +952,7 @@ int main( int argc, char* argv[] )
             std::vector<ResultFrame> results;
 
             const int NbLoops = 5;// put 200
-            const int MaxParticlesPerCell = 64;
+            const int MaxParticlesPerCell = 32;
             const int MaxBoxDiv = 256;// put 32
             for(int boxDiv = 2 ; boxDiv <= MaxBoxDiv ; boxDiv *= 2){
                 const int nbBoxes = boxDiv*boxDiv*boxDiv;
