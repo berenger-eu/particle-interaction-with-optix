@@ -27,7 +27,7 @@ Apart from specific files located in `SDK/optixMultiSphere`, `SDK/optixMultiTria
 
 `Cuda-version` is also under the MIT License.
 
-# How the code is build
+# How the code is designed
 
 In each of the four directories the same organization is used. We put here some snippets, but the latest version will be in the code.
 For example, in the `optixMultiTriangle` directory, there are:
